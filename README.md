@@ -5,7 +5,7 @@
 # CTDcasts_OOIcruises folder
  Kristen Fogaren 12/04/2020 
  
-  Each *.mlx/*.m file shows CTD casts done in the vicinity of OOI Irminger Sea assets with a map of cast locations. 
+  Each *.mlx/ *.m file shows CTD casts done in the vicinity of OOI Irminger Sea assets with a map of cast locations. 
 
  Workflow: 
  
