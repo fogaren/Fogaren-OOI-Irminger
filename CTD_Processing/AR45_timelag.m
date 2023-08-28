@@ -1,14 +1,14 @@
 clearvars
-addpath('G:\My Drive\Matlab_work\BC\Irminger\colab-workspace\CTD_Processing')
-addpath('G:\My Drive\Matlab_work\BC\Sea-Bird_Oxygen_Toolbox')
-addpath('G:\My Drive\Matlab_work\BC\Sea-Bird-Toolbox')
-addpath('G:\My Drive\Matlab_work\Functions\GSW')
+addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
+addpath('G:\My Drive\Matlab_work\Github\Sea-Bird_Oxygen_Toolbox')
+addpath('G:\My Drive\Matlab_work\Github\Sea-Bird-Toolbox')
+addpath(genpath('G:\My Drive\Matlab_work\Functions\GSW'))
 
 % cd('G:\My Drive\Matlab_work\OSU\GeneralCode')
 % run('GeneralSettings.m')
 %%
 
-cd('C:\Users\fogaren\Documents\SBE\AR45\ctd_data\raw\cnv_hyst')
+cd('C:\Users\fogaren\Documents\SBE\AR45\ctd_data\raw')
 a1 = 4; a2 = 5; a3 = 6;
 
 files = ls('*.cnv');

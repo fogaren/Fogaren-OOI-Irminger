@@ -22,9 +22,8 @@ SB = [-6.24097E-3; %salinity correction coefficients (B0, B1, B2, and B3)
         -6.90358E-3;
         -4.29155E-3];
 SC = -3.11680E-7; % salinity correction coefficient C0    
-D = 0.032; % pressure correction coefficient
-
-
+D = 0.032; % pressure correction coefficient usual KF
+% D = 0.027; % pressure correction coefficient optimal? KF
 O2corr = O2raw.*exp((sal - S0).*(SB(1)+SB(2)*temps+SB(3)*temps.^2+SB(4)*temps.^3)...
     + SC.*(sal.^2 - S0.^2))...
     .*(1+press.*D./1000);
