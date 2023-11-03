@@ -1,102 +1,247 @@
 % Working with Hilary's files 
 addpath(genpath('G:\My Drive\Matlab_work\Functions'))
-% cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary')
-% load('cruise_oxygen_output.mat')
-% load('glider_output.mat')
-% load('Irminger_calibratedO2_12July2023.mat')
 
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_Sept2023')
 load('glidermerge_output.mat')
 load('wfpmerge_output.mat')
 pres_grid = [150:1:2600];
 pres_grid_hypm = pres_grid;
+pt_grid = [1.5:0.02:5]; 
 
-%%
-%Load Kristen's MLD calculated from WFP chl data
-addpath('G:\Shared drives\NSF_Irminger\Data_Files\From_Kristen')
-load MLD_CHL_WFP.mat
-load MLD_CHL_WFP7.mat
-%chldt_mat = datenum(floor(chldt),0,0) + 365*(chldt - floor(chldt));
-chldt_mat = [chldt; chldt7];
-chlmld = [chlmld; chlmld7];
-chlmld(138) = NaN; % Bad data point 
+%% Load Kristen's MLD calculated from WFP chl data
+cd('G:\Shared drives\NSF_Irminger\Data_Files\From Meg')
+load blended_mld.mat
+blended_mld_all.dn = datenum(blended_mld_all.time); % Converts to datenum 
 
-% renames variables
-DOpres = pres_grid_hypm;
-DOdt = wggmerge.time;
-% DO = wggmerge.doxy_lagcorr.*wfp_profilegain_interp';
-DOwfp = wggmerge.doxy;
+cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Kristen')
+load wfp_chl_KF_Sep2023.mat
+wfp_chl.dt = datetime(wfp_chl.dn,'ConvertFrom','datenum'); %datetime of just observations
+wfp_chl.time_dt = datetime(wfp_chl.time,'ConvertFrom','datenum'); % datetime evenly spaced with NaNs
+% %%
+% % renames variables
+% DOpres = pres_grid_hypm;
+% DOdt = wggmerge.time;
+% DOwfp = wggmerge.doxy;
+% 
+% % sort oxygen data by time
+% [DOdt,index] = sortrows(wggmerge.time,'ascend');
+% DOwfp = DOwfp(:,index);
+% prho_wfp = wggmerge.pdens(:,index);
 
-% sort oxygen data by time
-[DOdt,index] = sortrows(DOdt,'ascend');
-DOwfp = DOwfp(:,index);
 
-%% Scatter plot with WFP and glider data
-% profilerng = [1:1:3371];
+%% Scatter plot with WFP data
+
 sz = 1;
 ymax = 2000;
 
-% figure(1); clf %Oxygen concentration
 f = figure;
 f.Position = [100 100 1200 400];
-% C = cmocean('dense'); %set colormap
-% for i = 1:length(glgmerge) % Adds glider data 
-%     glg = glgmerge{i};
-%     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-%     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-%     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% end
-% 
-% for i = 1:length(glgmerge) % Adds glider data 
-%     glg = glgmerge{i};
-%     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-%     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-%     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% end
-
-% [X,Y] = meshgrid(glidermerge.time, 1:1000);
-% scatter(X(:),Y(:),5,glidermerge.doxy(:),'filled'); hold on;
-% hold on
-% doxy_scat = wggmerge.doxy_lagcorr(:,profilerng).*wfp_profilegain_interp(profilerng)';
+C = cmocean('dense'); %set colormap
 [X,Y] = meshgrid(wggmerge.time, pres_grid_hypm);
-scatter(X(:),Y(:),5,DOwfp(:),'filled'); hold on;
-
-plot(chldt_mat, chlmld, 'k.','markersize',8); hold on; %Put in Kristen's new MLD data
-
-axis ij; axis tight; xlim([datenum(2014,9,10) datenum(2022,1,1)]); ylim([0 ymax]);
+scatter(X(:),Y(:),5,wggmerge.doxy(:),'filled'); hold on;
+% scatter(X(:),Y(:),5,prho_wfp(:),'filled'); hold on;
+plot(blended_mld_all.dn,blended_mld_all.mld,'k','Linewidth',1.4)
+axis ij; axis tight; 
+% xlim([datenum(2015,1,1) datenum(2022,1,1)]); ylim([0 ymax]);
 colormap(C); ylabel('Pressure (db)', 'Fontsize', 14); hcb = colorbar; set(hcb,'location','eastoutside')
 datetick('x',2,'keeplimits');
-title('Merged OOI Irminger glider and WFP oxygen concentration', 'Fontsize', 14)
+clim([260 320])
+% clim([1027.6 1027.95])
+title('OOI WFP oxygen concentration', 'Fontsize', 14)
 hcb.Label.String = 'DO (\mumol kg^-^1)';
 hcb.FontSize = 12;
-% hcb.Limits = [260 355];
 box on
-% set(gca,'TickLength',[0.1, 0.01])
 set(gca, 'TickDir', 'out')
-% %%
-% figure(2); clf %Oxygen concentration in PT space 
-% C = cmocean('Dense'); %set colormap
-% % for i = 1:length(glgmerge)
-% %     glg = glgmerge{i};
-% %     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-% %     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-% %     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% % end
-% doxy_scat_pt = wggmerge.doxy_lagcorr_pt(:,profilerng).*wfp_profilegain_interp(profilerng)';
-% [X,Y] = meshgrid(wggmerge.time(profilerng), pt_grid);
-% scatter(X(:),Y(:),5,doxy_scat_pt(:),'filled'); hold on;
-% 
-% %plot(chldt_mat, chlmld, 'k.','markersize',5); hold on; %Put in Kristen's new MLD data
-% 
-% axis tight; xlim([datenum(2014,9,10) datenum(2022,1,1)]); ylim([1.5 5]);
-% colormap(C); ylabel('PT (\circC)', 'Fontsize', 10); hcb = colorbar; set(hcb,'location','eastoutside')
-% datetick('x',2,'keeplimits');
-% title('Merged OOI Irminger glider and WFP oxygen concentration (\mumol/kg)', 'Fontsize', 12)
 
+%%
+yr = unique(year(wfp_chl.dn)); % Years of deployments; 
 
+% Using calendar year -- decide how to define respiration year
+% Finds all the points in a 3/15 to 3/15 year
+res_yr = []; % "Respiration year"
+for i = 1:length(yr)-1 % don't have full respiration year for first yera 
+    res_yr{i} = find((wggmerge.time > datenum(yr(i),03,15)) & (wggmerge.time < datenum(yr(i+1),03,15)));     
+end
+
+% find average prho for every 10 db from 200 to 2000
+prho_mean_by_db =[]; prho_median_by_db = []; prho_mode_by_db = []; 
+db_ind = 51:10:1851; % Indices for db every 10 db from 280 to 2000
+for i = 1:length(yr)-1
+    prho_mean_by_db{i} = nanmean(wggmerge.pdens(db_ind,res_yr{i}),2);
+    prho_median_by_db{i} = nanmedian(wggmerge.pdens(db_ind,res_yr{i}),2);
+    prho_mode_by_db{i} = mode(wggmerge.pdens(db_ind,res_yr{i}),2);
+end
+
+i = 2; 
+figure
+plot(prho_mean_by_db{i},pres_grid_hypm(db_ind),'.-')
+hold on
+plot(prho_median_by_db{i},pres_grid_hypm(db_ind),'.-')
+plot(prho_mode_by_db{i},pres_grid_hypm(db_ind),'.-')
+axis ij
+grid on
+legend('Mean','Median','Mode','Location','SW')
+%%
+%Start with mean 
+prho_grid = prho_mean_by_db{i}; 
+S = 5;
+pdens_grid = []; 
+for i = 1:length(yr)-1
+    pdens_grid{i}.doxy = NaN*ones(length(prho_grid),length(res_yr{i}));
+    
+    for j = 1:length(res_yr{i})
+        ind = find(~isnan(wggmerge.pdens(:,res_yr{i}(j))) & ~isnan(wggmerge.doxy(:,res_yr{i}(j))));
+        if ~isempty(ind)
+            pdens_grid{i}.doxy(:,j) = interp1(wggmerge.pdens(ind,res_yr{i}(j)),wggmerge.doxy(ind,res_yr{i}(j)),prho_grid,'makima');
+        end
+    end
+end
+%%
+i = 2; j = 1;
+figure
+plot(wggmerge.doxy(:,res_yr{i}(j)),pres_grid_hypm)
+hold on
+plot(plot(pdens_grid{i}.doxy(:,j),pres_grid_hypm(db_ind)))
 
 %%
 
+
+for i = 2:length(yr)-1
+    figure(i)
+%     scatter(X(:,res_yr{i}),Y(:,res_yr{i}),5,DOwfp(:,res_yr{i}),'filled'); hold on;
+%     pcolor(wggmerge.time(res_yr{i}),pres_grid_hypm,DOwfp(:,res_yr{i}))
+    pcolor(wggmerge.time(res_yr{i}),pres_grid_hypm,prho_wfp(:,res_yr{i}))
+    shading interp
+    axis ij
+    datetick
+    colorbar
+    title(num2str(yr(i)))
+
+%     plot(wfp_chl.time(res_yr{i})-datenum(yr(i),08,15),wfp_chl.mld_db_time(res_yr{i}),'.k')
+%     hold on
+%     plot(blended_mld_all.dn(dn_yr_blended{i})-datenum(yr(i),08,15),blended_mld_all.mld(dn_yr_blended{i}),'Linewidth',1.4)
+%     grid on
+%     axis ij
+%     ylim([200 1500])
+%     xlim([100 350])
+%     ylabel('MLD (db)')
+%     legend(num2str(yr(i)),'Location','SE')
+end
+% xlabel('Days since August 15')
+% sgtitle('Mixed Layer Progression by Year')
+% legend('14-15','15-16','16-17','17-18','18-19','19-20','20-21','21-22')
+%%
+% Calculate average pdens for target isopycnal 
+
+ind_target = find(pres_grid == 700 );
+pdens_target = nanmean(wggmerge.pdens(ind_target,:)); % target density
+% Should we do this for most stratified time of year?
+% Should we target density for 1st profile or average of all profiles 
+
+% Find index in each profile that is closest to target density 
+a = []; b = [];
+for i = 1:length(wggmerge.time)
+%     if ~isnan(wggmerge.pdens(ind_target,i))
+        [a(i),b(i)] = min(abs(wggmerge.pdens(:,i) - pdens_target));
+%     end
+
+    if a(i) > 0.00002 % What do we want to call the same isopycnal? 
+        b(i) = NaN;
+    end
+
+    if isnan(wggmerge.pdens(ind_target,i))
+        b(i) = NaN;
+    end
+end
+%%
+for i = 1:length(wggmerge.time)
+    figure(1)
+    clf
+    subplot(1,2,1)
+    plot(abs(wggmerge.pdens(:,i) - pdens_target),pres_grid);
+    axis ij; grid on
+    title('Profile pdens - target pdens')
+
+    subplot(1,2,2)
+    plot(wggmerge.doxy(:,i),pres_grid);
+    axis ij; grid on
+    title('Oxygen')
+    sgtitle(datestr(wggmerge.time(i)))
+    pause
+end
+%%
+test = []; test2 = []; test3 = []; test4 = [];
+for i = 1:length(b)
+    if ~isnan(b(i))
+            
+        test(i) = wggmerge.doxy(b(i),i);
+        test2(i) = wggmerge.temp(b(i),i);
+        test3(i) = pres_grid(b(i));
+        test4(i) = wggmerge.pdens(b(i),i);
+    end
+    if isnan(b(i))
+        test(i) = NaN;
+        test2(i) = NaN;
+        test3(i) = NaN;
+        test4(i) = NaN;
+    end
+end
+testyy = smooth(wggmerge.time,test,0.025,'loess');
+figure(1)
+clf
+subplot(3,1,1)
+plot(wggmerge.time,test,'.')
+hold on
+% plot(wggmerge.time,testyy,'k','Linewidth',1.5)
+title(['Oxygen of isopycnal ' num2str(pdens_target)])
+datetick
+grid on
+ylabel('umol kg^-^1')
+
+subplot(3,1,2)
+% yyaxis left
+plot(wggmerge.time,test2,'.')
+ylabel('\circC')
+
+% yyaxis right
+% plot(wggmerge.time,test4,'.')
+% ylabel('PSU')
+title(['Temp of isopycnal ' num2str(pdens_target)])
+datetick
+
+grid on
+
+subplot(3,1,3)
+plot(wggmerge.time,test3,'.')
+title(['Pressure of isopycnal ' num2str(pdens_target)])
+datetick
+axis ij
+ylabel('dbar')
+grid on
+sgtitle(['Mean isopycnal at ' num2str(pres_grid(ind_target)) ' dbar = ' num2str(pdens_target)])
+
+
+figure
+plot(wggmerge.time,test4,'.')
+%%
+
+ind200= find(pres_grid == 200);
+pdens200 = nanmean(wggmerge.pdens(ind200,:)); % target density 
+
+ind250= find(pres_grid == 250);
+pdens250 = nanmean(wggmerge.pdens(ind250,:)); % target density 
+
+ind500= find(pres_grid == 500);
+pdens500 = nanmean(wggmerge.pdens(ind500,:)); % target density 
+
+ind750= find(pres_grid == 750);
+pdens750 = nanmean(wggmerge.pdens(ind750,:)); % target density
+
+ind1000= find(pres_grid == 1000);
+pdens1000 = nanmean(wggmerge.pdens(ind1000,:)); % target density 
+
+ind2000= find(pres_grid == 2000);
+pdens2000 = nanmean(wggmerge.pdens(ind2000,:)); % target density 
 %%
 prs250 = [];
 prs500 = [];
@@ -108,13 +253,13 @@ prs1000 = [];
 % prs750e = [];
 % prs1000e = [];
 
-for yr = 1:length(year(chldt_mat(1)):year(chldt_mat(end)))
+for yr = 1:length(year(wfp_chl.dn(1)):year(wfp_chl.dn(end)))
     i = 2013 + yr;
-    ind = find(chldt_mat > datenum(i,09,01) & chldt_mat < datenum(i+1,06,01));
-    mld = chlmld(ind); 
-    dt = chldt_mat(ind);
+    ind = find(wfp_chl.dn > datenum(i,09,01) & wfp_chl.dn < datenum(i+1,06,01));
+    mld = wfp_chl.mld_db(ind); % Need to convert to pdens space 
+    dt = wfp_chl.dn(ind);
 
-    ind250 = find(mld >= 250); %ind250e = find(mld > 250);
+    ind250 = find(mld >= 250); %ind250e = find(mld > 250); % Convert to pdense space 
     ind500 = find(mld >= 500); %ind500e = find(mld > 500);
     ind750 = find(mld >= 750); %ind750e = find(mld > 750);
     ind1000 = find(mld >= 1000); %ind1000e = find(mld > 1000);
@@ -165,12 +310,12 @@ end
 %%
 run('GeneralSettings.m')
 figure
-plot(chldt_mat,chlmld,'.','MarkerSize',20,'Color',blue)
+plot(wfp_chl.dn,chlmld,'.','MarkerSize',20,'Color',blue)
 hold on
-plot(chldt_mat,ones(length(chldt_mat),1)*250,'k','Linewidth',2)
-plot(chldt_mat,ones(length(chldt_mat),1)*500,'k','Linewidth',2)
-plot(chldt_mat,ones(length(chldt_mat),1)*750,'k','Linewidth',2)
-plot(chldt_mat,ones(length(chldt_mat),1)*1000,'k','Linewidth',2)
+plot(wfp_chl.dn,ones(length(wfp_chl.dn),1)*250,'k','Linewidth',2)
+plot(wfp_chl.dn,ones(length(wfp_chl.dn),1)*500,'k','Linewidth',2)
+plot(wfp_chl.dn,ones(length(wfp_chl.dn),1)*750,'k','Linewidth',2)
+plot(wfp_chl.dn,ones(length(wfp_chl.dn),1)*1000,'k','Linewidth',2)
 datetick
 axis ij
 grid on
