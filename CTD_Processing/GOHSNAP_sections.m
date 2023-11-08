@@ -1,0 +1,1174 @@
+clearvars; close all
+% Toolbox for transect plotting 
+addpath(genpath('G:\My Drive\Matlab_work\Github\CDT'))
+
+% Load in calibrated cruise data
+cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Processed')
+load AR6903_Processed_KF_notfinal.mat
+load AR6903_Nuts_KF.mat
+
+% Datasets for plotting
+cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Kristen')
+load GOHSNAP_asset_locations.mat
+load OOImooringLocations.mat
+ooi.depth = 50:100:2450;
+ooi.lon = OOImoorings.HYPM7(2)*ones(size(ooi.depth));
+
+load LSea_bathymetry.mat
+load BedM_Irminger_Section.mat
+load('CFmooring_locations.mat');
+%Deepest to shallowest
+CF1_line = [50,173];
+CF2_line = [50,178];
+CF3_line = [50,183];
+CF4_line = [50,386];
+CF5_line = [50,1273];
+CF6_line = [50,1830];
+CF7_line = [50,1900];
+M1_line = [50,2000];
+M2_line = [50,2500];
+M3_line = [50,2500];
+LS1_line = [50,175];
+LS3_line = [50,200];
+LS4_line = [50,650];
+LS5_line = [50,1500];
+LS6_line = [50,2000];
+LS7_line = [50,2400];
+LS8_line = [50,2900];
+
+
+downcasts = downcasts_AR6903;
+upcasts = upcasts_AR6903;
+%% OSNAP EAST DO sat and DO concentration 
+cast_num = 16:32; %OSNAP East 
+
+DO = []; DOsat = []; prs = []; lon = [];
+    
+for i = 1:length(cast_num)  
+    lon(i) = downcasts{cast_num(i)}.lon(1);
+    DO{i} = downcasts{cast_num(i)}.DOcorr_umolkg;
+    DOsat{i} = (downcasts{cast_num(i)}.DOcorr_umolkg./downcasts{cast_num(i)}.O2sol_umolkg)*100;
+    prs{i} = downcasts{cast_num(i)}.prs;
+end
+
+% Find max and min 
+minsat = []; maxsat = [];
+minconc = []; maxconc =[];
+
+for i = 1:length(cast_num)
+    minsat(i) = min(DOsat{i});
+    maxsat(i) = max(DOsat{i});
+    minconc(i) = min(DO{i});
+    maxconc(i) = max(DO{i});
+end
+
+% Extrapolate cast data deeper for prettier plots 
+depth = 6:2:3000;
+prsinterp = []; DOinterp = []; DOinterpsat = [];
+for i = 1:length(cast_num)  
+    prsinterp{i} = depth';
+    DOinterp{i} = interp1(prs{i},DO{i},depth,'nearest','extrap');
+    DOinterpsat{i} = interp1(prs{i},DOsat{i},depth,'nearest','extrap');
+end
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterpsat,'color','none','interp','linear')
+hold on % Add location of CTD plots and label the cast numbers 
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = cast_num';
+b= num2str(a);
+c = cellstr(b);
+dx = -0.02; dy = -80;
+T = text(lon+dx,(-25.*ones(1,length(cast_num))+dy),c,'FontSize',12);
+
+% Axes and Labels 
+ax = gca;
+set(ax,'clim',[min(minsat) max(maxsat)]) % Important if using interp other than extrapolate nearest above 
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (% sat.)','Fontsize',12)
+cmocean('balance','pivot',100)
+ylim([-40 3000])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels 
+title('Western Irminger Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% To include mooring locations and names 
+dx2 = -.03; dy2 = 150;
+plot(CFMicroCat.Lon(1:2,1),1*CF1_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,1)+dx2,1*CF1_line(2)+dy2,{'CF1'},'FontSize',12);
+
+% plot(CFMicroCat.Lon(1:2,2),1*CF2_line',':k','LineWidth',1.5); % No
+% GOSHNAP assets on CF2
+% text(CFMicroCat.Lon(1,2)+dx2,1*CF2_line(2)+dy2,{'CF2'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,3),1*CF3_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,3)+dx2,1*CF3_line(2)+dy2,{'CF3'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,4),1*CF4_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,4)+-0.04,1*CF4_line(2)+dy2,{'CF4'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,5),1*CF5_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,5)+dx2,1*CF5_line(2)+350,{'CF5'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,6),1*CF6_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,6)+dx2,1*CF6_line(2)+dy2,{'CF6'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,7),1*CF7_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,7)+dx2,1*CF7_line(2)+dy2,{'CF7'},'FontSize',12);
+
+plot(CF_M_assets.lon(18:19),1*M1_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(18)+dx2,1*M1_line(2)+dy2,{'M1'},'FontSize',12);
+
+plot(CF_M_assets.lon(21:22),1*M2_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(21)+dx2,1*M2_line(2)+dy2,{'M2'},'FontSize',12);
+
+plot(CF_M_assets.lon(24:25),1*M3_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(24)+dx2,1*M3_line(2)+200,{'M3'},'FontSize',12);
+
+plot(CF_M_assets.lon,CF_M_assets.depth,'^k','MarkerSize',8)
+%% DO concentration 
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterp,'color','none','interp','pchip') % Change color if you want to show CTD sample points 
+hold on
+% Add location of CTD plots and label the cast numbers 
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = cast_num';
+b= num2str(a);
+c = cellstr(b);
+dx = -0.02; dy = -80;
+T = text(lon+dx,(-25.*ones(1,length(cast_num))+dy),c,'FontSize',12);
+
+% Axes and labels
+ax = gca;
+set(ax,'clim',[min(minconc) max(maxconc)])
+% set(ax,'clim',[min(minconc) 310])
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (\mumol kg^-^1)','Fontsize',12)
+ylim([-40 3000]) 
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels 
+title('Western Irminger Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% To include mooring locations and names 
+dx2 = -.03; dy2 = 150;
+plot(CFMicroCat.Lon(1:2,1),1*CF1_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,1)+dx2,1*CF1_line(2)+dy2,{'CF1'},'FontSize',12);
+
+% plot(CFMicroCat.Lon(1:2,2),1*CF2_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,2)+dx2,1*CF2_line(2)+dy2,{'CF2'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,3),1*CF3_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,3)+dx2,1*CF3_line(2)+dy2,{'CF3'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,4),1*CF4_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,4)+-0.04,1*CF4_line(2)+dy2,{'CF4'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,5),1*CF5_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,5)+dx2,1*CF5_line(2)+350,{'CF5'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,6),1*CF6_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,6)+dx2,1*CF6_line(2)+dy2,{'CF6'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,7),1*CF7_line',':k','LineWidth',1.5);
+text(CFMicroCat.Lon(1,7)+dx2,1*CF7_line(2)+dy2,{'CF7'},'FontSize',12);
+
+plot(CF_M_assets.lon(18:19),1*M1_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(18)+dx2,1*M1_line(2)+dy2,{'M1'},'FontSize',12);
+
+plot(CF_M_assets.lon(21:22),1*M2_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(21)+dx2,1*M2_line(2)+dy2,{'M2'},'FontSize',12);
+
+plot(CF_M_assets.lon(24:25),1*M3_line',':k','LineWidth',1.5);
+text(CF_M_assets.lon(24)+dx2,1*M3_line(2)+200,{'M3'},'FontSize',12);
+
+plot(CF_M_assets.lon,CF_M_assets.depth,'^k','MarkerSize',8)
+
+%% Lab Sea  DO sat and DO concentration versus Long
+
+cast_num = [85 87:94 96:105 113:118 125]; % LS 
+DO = []; DOsat = []; prs = []; lon = [];
+
+casts = upcasts; % Something off with downcasts
+
+for i = 1:length(cast_num)
+    lon(i) = casts{cast_num(i)}.lon(1);
+    lat(i) = casts{cast_num(i)}.lat(1);
+end
+
+ind = find(cast_num == 104); 
+
+for i = 1:length(cast_num) 
+    dist(i) = gsw_distance([lon(i) lon(ind)],[lat(i) lat(ind)]);
+    DO{i} = casts{cast_num(i)}.DOcorr_umolkg;
+    DOsat{i} = (casts{cast_num(i)}.DOcorr_umolkg./casts{cast_num(i)}.O2sol_umolkg)*100;
+    prs{i} = casts{cast_num(i)}.prs;
+end
+dist = -dist/1000; % m to km
+
+% Find max and min 
+minsat = []; maxsat = [];
+minconc = []; maxconc =[];
+
+for i = 1:length(cast_num)
+    minsat(i) = min(DOsat{i});
+    maxsat(i) = max(DOsat{i});
+    minconc(i) = min(DO{i});
+    maxconc(i) = max(DO{i});
+end
+
+% Extrapolate cast data deeper for prettier plots 
+depth = 6:2:3250;
+prsinterp = []; DOinterp = []; DOinterpsat = [];
+for i = 1:length(cast_num)  
+    prsinterp{i} = depth';
+    DOinterp{i} = interp1(prs{i},DO{i},depth,'nearest','extrap');
+    DOinterpsat{i} = interp1(prs{i},DOsat{i},depth,'nearest','extrap');
+end
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterpsat,'color','none','interp','pchip')
+% transect(lon,prs,DOsat,'color','k','markersize',5)
+hold on % Add location of CTD plots and label the cast numbers 
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = cast_num';
+b= num2str(a);
+c = cellstr(b);
+dx = -0.03; dy = -80;
+T = text(lon+dx,(-25.*ones(1,length(cast_num))+dy),c,'FontSize',10);
+
+% Axes and Labels 
+ax = gca;
+set(ax,'clim',[min(minsat) max(maxsat)]) % Important if using interp other than extrapolate nearest above 
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (% sat.)','Fontsize',12)
+cmocean('balance','pivot',100)
+ylim([-40 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels 
+title('Labrador Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% To include mooring locations and names 
+dx2 = -.05; dy2 = 150;
+LSlon = unique(LS_assets.lon);
+LSlat = unique(LS_assets.lat);
+
+plot([LSlon(1) LSlon(1)],1*LS8_line',':k','LineWidth',1.5);
+text(LSlon(1)+dx2,LS8_line(2)+dy2,{'LS8'},'FontSize',12);
+
+plot([LSlon(2) LSlon(2)],1*LS7_line',':k','LineWidth',1.5);
+text(LSlon(2),LS7_line(2)+dy2,{'LS7'},'FontSize',12);
+
+plot([LSlon(3) LSlon(3)],1*LS6_line',':k','LineWidth',1.5);
+text(LSlon(3)+dx2,LS6_line(2)+dy2,{'LS6'},'FontSize',12);
+
+plot([LSlon(4) LSlon(4)],1*LS5_line',':k','LineWidth',1.5);
+text(LSlon(4)+0.01,LS5_line(2)+dy2,{'LS5'},'FontSize',12);
+
+plot([LSlon(5) LSlon(5)],1*LS4_line',':k','LineWidth',1.5);
+text(LSlon(5),LS4_line(2)+dy2,{'LS4'},'FontSize',12);
+
+plot([LSlon(6) LSlon(6)],1*LS3_line',':k','LineWidth',1.5);
+text(LSlon(6)+dx2,LS3_line(2)+dy2,{'LS3'},'FontSize',12);
+
+plot([LSlon(7) LSlon(7)],1*LS1_line',':k','LineWidth',1.5);
+text(LSlon(7)+dx2,LS1_line(2)+dy2,{'LS1'},'FontSize',12);
+plot(LS_assets.lon,LS_assets.depth,'^k','MarkerSize',8)
+%% DO concentration 
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterp,'color','none','interp','pchip')
+% transect(lon,prs,DOsat,'color','k','markersize',5)
+hold on % Add location of CTD plots and label the cast numbers 
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = cast_num';
+b= num2str(a);
+c = cellstr(b);
+dx = -0.03; dy = -80;
+T = text(lon+dx,(-25.*ones(1,length(cast_num))+dy),c,'FontSize',10);
+
+% Axes and Labels 
+ax = gca;
+set(ax,'clim',[min(minconc) max(maxconc)]) % Important if using interp other than extrapolate nearest above 
+% set(ax,'clim',[min(minconc) 300])
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (\mumol kg ^-^1)','Fontsize',12)
+ylim([-40 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels 
+title('Labrador Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% To include mooring locations and names 
+dx2 = -.05; dy2 = 150;
+LSlon = unique(LS_assets.lon);
+LSlat = unique(LS_assets.lat);
+
+plot([LSlon(1) LSlon(1)],1*LS8_line',':k','LineWidth',1.5);
+text(LSlon(1)+dx2,LS8_line(2)+dy2,{'LS8'},'FontSize',12);
+
+plot([LSlon(2) LSlon(2)],1*LS7_line',':k','LineWidth',1.5);
+text(LSlon(2),LS7_line(2)+dy2,{'LS7'},'FontSize',12);
+
+plot([LSlon(3) LSlon(3)],1*LS6_line',':k','LineWidth',1.5);
+text(LSlon(3)+dx2,LS6_line(2)+dy2,{'LS6'},'FontSize',12);
+
+plot([LSlon(4) LSlon(4)],1*LS5_line',':k','LineWidth',1.5);
+text(LSlon(4)+0.01,LS5_line(2)+dy2,{'LS5'},'FontSize',12);
+
+plot([LSlon(5) LSlon(5)],1*LS4_line',':k','LineWidth',1.5);
+text(LSlon(5),LS4_line(2)+dy2,{'LS4'},'FontSize',12);
+
+plot([LSlon(6) LSlon(6)],1*LS3_line',':k','LineWidth',1.5);
+text(LSlon(6)+dx2,LS3_line(2)+dy2,{'LS3'},'FontSize',12);
+
+plot([LSlon(7) LSlon(7)],1*LS1_line',':k','LineWidth',1.5);
+text(LSlon(7)+dx2,LS1_line(2)+dy2,{'LS1'},'FontSize',12);
+plot(LS_assets.lon,LS_assets.depth,'^k','MarkerSize',8)
+
+%% Whole irminger Section 
+cast_num = 2:32;
+DO = []; DOsat = []; prs = []; lon = [];
+
+for i = 1:length(cast_num)  
+    lon(i) = downcasts{cast_num(i)}.lon(1);
+    DO{i} = downcasts{cast_num(i)}.DOcorr_umolkg;
+    DOsat{i} = (downcasts{cast_num(i)}.DOcorr_umolkg./downcasts{cast_num(i)}.O2sol_umolkg)*100;
+    prs{i} = downcasts{cast_num(i)}.prs;
+end
+minsat = []; maxsat = [];
+minconc = []; maxconc =[];
+for i = 1:length(cast_num)
+    minsat(i) = min(DOsat{i});
+    maxsat(i) = max(DOsat{i});
+    minconc(i) = min(DO{i});
+    maxconc(i) = max(DO{i});
+end
+depth = 6:2:3500;
+prsinterp = []; DOinterp = []; DOinterpsat = [];
+for i = 1:length(cast_num)  
+    prsinterp{i} = depth';
+    DOinterp{i} = interp1(prs{i},DO{i},depth,'nearest','extrap');
+    DOinterpsat{i} = interp1(prs{i},DOsat{i},depth,'nearest','extrap');
+end
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterpsat,'color','none','interp','pchip') % Change color if you want to show CTD sample points 
+hold on
+
+%Create text labels for CTD stations. Only apply text to 2 - 19 and then
+%32. Other stations are too dense for labels
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = vertcat([2:19]',32); %Specific to Irminger Section Station Numbers
+b= num2str(a);
+c = cellstr(b);
+dx = -0.11; dy = -100;
+T = text(horzcat(lon(1:18),lon(31))+dx,(-25.*ones(1,length(1:19))+dy),c,'FontSize',11.5);
+
+% Axes and Labels 
+ax = gca;
+set(ax,'clim',[min(minsat) max(maxsat)]) % Important if using interp other than extrapolate nearest above 
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (% sat.)','Fontsize',12)
+cmocean('balance','pivot',100)
+ylim([-40 3500])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels
+title('Irminger Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% Add mooring locations (without labels) 
+dx2 = -.03; dy2 = 150;
+plot(CFMicroCat.Lon(1:2,1),1*CF1_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,1)+dx2,1*CF1_line(2)+dy2,{'CF1'},'FontSize',12);
+
+% plot(CFMicroCat.Lon(1:2,2),1*CF2_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,2)+dx2,1*CF2_line(2)+dy2,{'CF2'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,3),1*CF3_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,3)+dx2,1*CF3_line(2)+dy2,{'CF3'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,4),1*CF4_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,4)+-0.04,1*CF4_line(2)+dy2,{'CF4'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,5),1*CF5_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,5)+dx2,1*CF5_line(2)+350,{'CF5'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,6),1*CF6_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,6)+dx2,1*CF6_line(2)+dy2,{'CF6'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,7),1*CF7_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,7)+dx2,1*CF7_line(2)+dy2,{'CF7'},'FontSize',12);
+
+plot(CF_M_assets.lon(18:19),1*M1_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(18)+dx2,1*M1_line(2)+dy2,{'M1'},'FontSize',12);
+
+plot(CF_M_assets.lon(21:22),1*M2_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(21)+dx2,1*M2_line(2)+dy2,{'M2'},'FontSize',12);
+
+plot(CF_M_assets.lon(24:25),1*M3_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(24)+dx2,1*M3_line(2)+200,{'M3'},'FontSize',12);
+
+l1 = plot(CF_M_assets.lon,CF_M_assets.depth,'^k','MarkerSize',8,'DisplayName','GOHSNAP Assets');
+l2 = plot(ooi.lon,ooi.depth,'*k','DisplayName','OOI Assets');
+l = legend([l1 l2],'Location','SW','Fontsize',11,'Box','off','Color','none');
+
+%% Irmigner Section in concentration 
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(lon,prsinterp,DOinterp,'color','none','interp','pchip') % Change color if you want to show CTD sample points 
+hold on
+
+%Create text labels for CTD stations. Only apply text to 2 - 19 and then
+%32. Other stations are too dense for labels
+h2 = scatter(lon,-25*ones(1,length(cast_num)),65,'v','MarkerEdgeColor','none','MarkerFaceColor',[128/255 133/255 133/255]);
+a = vertcat([2:19]',32); %Specific to Irminger Section Station Numbers
+b= num2str(a);
+c = cellstr(b);
+dx = -0.11; dy = -100;
+T = text(horzcat(lon(1:18),lon(31))+dx,(-25.*ones(1,length(1:19))+dy),c,'FontSize',11.5);
+
+% Axes and Labels 
+ax = gca;
+set(ax,'clim',[min(minconc) max(maxconc)]) % Important if using interp other than extrapolate nearest above
+% % If want to look at variability not dependent on high fjord values
+% set(ax,'clim',[min(minconc) 350])
+% colorbar(axes1,...
+%     'TickLabels',{'240','250','260','270','280','290','300','310','320','330','340','>350'});
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Dissolved Oxygen (\mumol kg^-^1)','Fontsize',12)
+ylim([-40 3500])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+% To shift title because of CTD Cast number labels
+title('Irminger Sea Section','FontSize',16)
+set(gca, 'Units', 'normalized')
+titleHandle = get(gca, 'Title');
+pos = get(titleHandle, 'position');
+newpos = pos + [0 -50 0];
+set(titleHandle,'position', newpos);
+
+% Add mooring locations (without labels) 
+dx2 = -.03; dy2 = 150;
+plot(CFMicroCat.Lon(1:2,1),1*CF1_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,1)+dx2,1*CF1_line(2)+dy2,{'CF1'},'FontSize',12);
+
+% plot(CFMicroCat.Lon(1:2,2),1*CF2_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,2)+dx2,1*CF2_line(2)+dy2,{'CF2'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,3),1*CF3_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,3)+dx2,1*CF3_line(2)+dy2,{'CF3'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,4),1*CF4_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,4)+-0.04,1*CF4_line(2)+dy2,{'CF4'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,5),1*CF5_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,5)+dx2,1*CF5_line(2)+350,{'CF5'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,6),1*CF6_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,6)+dx2,1*CF6_line(2)+dy2,{'CF6'},'FontSize',12);
+
+plot(CFMicroCat.Lon(1:2,7),1*CF7_line',':k','LineWidth',1.5);
+% text(CFMicroCat.Lon(1,7)+dx2,1*CF7_line(2)+dy2,{'CF7'},'FontSize',12);
+
+plot(CF_M_assets.lon(18:19),1*M1_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(18)+dx2,1*M1_line(2)+dy2,{'M1'},'FontSize',12);
+
+plot(CF_M_assets.lon(21:22),1*M2_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(21)+dx2,1*M2_line(2)+dy2,{'M2'},'FontSize',12);
+
+plot(CF_M_assets.lon(24:25),1*M3_line',':k','LineWidth',1.5);
+% text(CF_M_assets.lon(24)+dx2,1*M3_line(2)+200,{'M3'},'FontSize',12);
+
+l1 = plot(CF_M_assets.lon,CF_M_assets.depth,'^k','MarkerSize',8,'DisplayName','GOHSNAP Assets');
+l2 = plot(ooi.lon,ooi.depth,'*k','DisplayName','OOI Assets');
+l = legend([l1 l2],'Location','SW','Fontsize',11,'Box','off','Color','none');
+
+
+%% Nutrient section plotting 
+lon = []; % lon for plotting
+cast = []; 
+for i = 1:length(nut_casts)
+    lon(i) = nutsum{nut_casts(i)}.lon(1);
+    cast(i) = nutsum{nut_casts(i)}.Cast(1);
+end
+[~,ind] = find(cast < 33); % Irminger Section 
+prs = []; plon = []; 
+Si_umolkg = []; SRP_umolkg = [];
+NH4_umolkg = []; NO3_umolkg = []; NO2_umolkg = [];
+for i = 1:length(ind) 
+    plon(i) = nutsum{nut_casts(ind(i))}.lon(1);
+    prs{i} = nutsum{nut_casts(ind(i))}.prs;
+    Si_umolkg{i} = nutsum{nut_casts(ind(i))}.Si_umolkg;
+    NO2_umolkg{i} = nutsum{nut_casts(ind(i))}.NO2_umolkg;
+    NO3_umolkg{i} = nutsum{nut_casts(ind(i))}.NO3_umolkg;
+    SRP_umolkg{i} = nutsum{nut_casts(ind(i))}.SRP_umolkg;
+    NH4_umolkg{i} = nutsum{nut_casts(ind(i))}.NH4_umolkg;
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth = 3300;
+prs_interp = []; Si_umolkg_interp = []; SRP_umolkg_interp = [];
+NH4_umolkg_interp = []; NO3_umolkg_interp = []; NO2_umolkg_interp = [];
+for i = 1:length(plon) 
+    prs_interp{i} = [depth; prs{i}];
+    Si_umolkg_interp{i} = interp1(prs{i},Si_umolkg{i},prs_interp{i},'nearest','extrap');
+    SRP_umolkg_interp{i} = interp1(prs{i},SRP_umolkg{i},prs_interp{i},'nearest','extrap');
+    NH4_umolkg_interp{i} = interp1(prs{i},NH4_umolkg{i},prs_interp{i},'nearest','extrap');
+    NO3_umolkg_interp{i} = interp1(prs{i},NO3_umolkg{i},prs_interp{i},'nearest','extrap');
+    NO2_umolkg_interp{i} = interp1(prs{i},NO2_umolkg{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,Si_umolkg_interp,'interp','linear')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Silica (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NH4_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Ammonium (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NO3_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Nitrate (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NO2_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Nitrite (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,SRP_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Phosphate (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16)
+%% Lab Sea Sections 
+ind = 23:39;
+prs = []; plon = []; 
+Si_umolkg = []; SRP_umolkg = [];
+NH4_umolkg = []; NO3_umolkg = []; NO2_umolkg = [];
+% for i = 1:length(ind) % Didn't matter if you sorted lon before using
+% transect function 
+%     plon(i) = nutsum{nut_casts(ind(i))}.lon(1);
+% end
+% [plonsort,lonind] = sort(plon);
+% ind = ind(lonind);
+
+for i = 1:length(ind) 
+    plon(i) = nutsum{nut_casts(ind(i))}.lon(1);
+    prs{i} = nutsum{nut_casts(ind(i))}.prs;
+    Si_umolkg{i} = nutsum{nut_casts(ind(i))}.Si_umolkg;
+    NO2_umolkg{i} = nutsum{nut_casts(ind(i))}.NO2_umolkg;
+    NO3_umolkg{i} = nutsum{nut_casts(ind(i))}.NO3_umolkg;
+    SRP_umolkg{i} = nutsum{nut_casts(ind(i))}.SRP_umolkg;
+    NH4_umolkg{i} = nutsum{nut_casts(ind(i))}.NH4_umolkg;
+end
+
+LS_nut_tbl = [];
+for i = 1:length(ind)
+    LS_nut_tbl = [LS_nut_tbl; nutsum{nut_casts(ind(i))}];
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth = 3300;
+prs_interp = []; Si_umolkg_interp = []; SRP_umolkg_interp = [];
+NH4_umolkg_interp = []; NO3_umolkg_interp = []; NO2_umolkg_interp = [];
+for i = 1:length(ind) 
+    prs_interp{i} = [depth; prs{i}];
+    Si_umolkg_interp{i} = interp1(prs{i},Si_umolkg{i},prs_interp{i},'nearest','extrap');
+    SRP_umolkg_interp{i} = interp1(prs{i},SRP_umolkg{i},prs_interp{i},'nearest','extrap');
+    NH4_umolkg_interp{i} = interp1(prs{i},NH4_umolkg{i},prs_interp{i},'nearest','extrap');
+    NO3_umolkg_interp{i} = interp1(prs{i},NO3_umolkg{i},prs_interp{i},'nearest','extrap');
+    NO2_umolkg_interp{i} = interp1(prs{i},NO2_umolkg{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,Si_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Silica (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)
+
+figure
+scatter(LS_nut_tbl.lon,LS_nut_tbl.prs,25,LS_nut_tbl.NH4_umolkg,'filled')
+axis ij
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NH4_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Ammonium (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Labrador Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NO3_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Nitrate (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,NO2_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Nitrite (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,SRP_umolkg_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+ylabel(c,'Phosphate (\mumol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)
+%% DIC Plots Irminger 
+
+cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Processed')
+load AR6903_DIC_TA_KF.mat
+
+
+lon = []; % lon for plotting
+cast = []; 
+
+for i = 1:length(DIC_casts)
+    lon(i) = DICsum{DIC_casts(i)}.lon(1);
+    cast(i) = DICsum{DIC_casts(i)}.Cast(1);
+    ind_NaN = ~isnan(DICsum{DIC_casts(i)}.DIC); % Find DIC == NaN
+    DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(ind_NaN == 1,:); % Only keep not NaN DIC rows
+    if issorted(DICsum{DIC_casts(i)}.Bottle) == 0
+        [~,b] = sort(DICsum{DIC_casts(i)}.Bottle);
+        DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(b,:);
+    end
+    if min(diff(DICsum{DIC_casts(i)}.Bottle)) == 0
+        ind_rm = find(diff(DICsum{DIC_casts(i)}.Bottle) == 0);
+        DICmean = mean([DICsum{DIC_casts(i)}.DIC(ind_rm) DICsum{DIC_casts(i)}.DIC(ind_rm+1)]);
+        DICsum{DIC_casts(i)}.DIC(ind_rm) = DICmean;
+        DICsum{DIC_casts(i)}(ind_rm+1,:) = [];
+    end
+
+end
+
+ind = 2:15; % Irminger Section of DIC casts 
+prs = []; plon = []; 
+DIC = []; TA = [];
+for i = 1:length(ind) 
+    plon(i) = DICsum{DIC_casts(ind(i))}.lon(1);
+    prs{i} = DICsum{DIC_casts(ind(i))}.prs;
+    DIC{i} = DICsum{DIC_casts(ind(i))}.DIC;
+    TA{i} = DICsum{DIC_casts(ind(i))}.TA;
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth_end = 3300; depth_start = 0;
+prs_interp = []; DIC_interp = []; TA_interp = [];
+for i = 1:length(plon) 
+    prs_interp{i} = [depth_end; prs{i}];% 0];
+    DIC_interp{i} = interp1(prs{i},DIC{i},prs_interp{i},'nearest','extrap');
+    TA_interp{i} = interp1(prs{i},TA{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,DIC_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+% set(ax,'clim',[2150 max(DICsum_tbl.DIC)])
+ylabel(c,'DIC (mmol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16) 
+%%
+load AR6903_DIC_TA_KF.mat
+
+
+lon = []; % lon for plotting
+cast = []; 
+
+for i = 1:length(DIC_casts)
+    lon(i) = DICsum{DIC_casts(i)}.lon(1);
+    cast(i) = DICsum{DIC_casts(i)}.Cast(1);
+    ind_NaN = ~isnan(DICsum{DIC_casts(i)}.TA); % Find TA == NaN
+    DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(ind_NaN == 1,:); % Only keep not NaN DIC rows
+    if issorted(DICsum{DIC_casts(i)}.Bottle) == 0
+        [~,b] = sort(DICsum{DIC_casts(i)}.Bottle);
+        DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(b,:);
+    end
+    if min(diff(DICsum{DIC_casts(i)}.Bottle)) == 0
+        ind_rm = find(diff(DICsum{DIC_casts(i)}.Bottle) == 0);
+        TAmean = mean([DICsum{DIC_casts(i)}.TA(ind_rm) DICsum{DIC_casts(i)}.TA(ind_rm+1)]);
+        DICsum{DIC_casts(i)}.TA(ind_rm) = TAmean;
+        DICsum{DIC_casts(i)}(ind_rm+1,:) = [];
+    end
+
+end
+
+ind = 2:15; % Irminger Section of DIC casts 
+prs = []; plon = []; 
+DIC = []; TA = [];
+for i = 1:length(ind) 
+    plon(i) = DICsum{DIC_casts(ind(i))}.lon(1);
+    prs{i} = DICsum{DIC_casts(ind(i))}.prs;
+    DIC{i} = DICsum{DIC_casts(ind(i))}.DIC;
+    TA{i} = DICsum{DIC_casts(ind(i))}.TA;
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth_end = 3300; depth_start = 0;
+prs_interp = []; DIC_interp = []; TA_interp = [];
+for i = 1:length(plon) 
+    prs_interp{i} = [depth_end; prs{i}];% 0];
+    DIC_interp{i} = interp1(prs{i},DIC{i},prs_interp{i},'nearest','extrap');
+    TA_interp{i} = interp1(prs{i},TA{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,TA_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+set(ax,'clim',[2250 max(DICsum_tbl.TA)])
+ylabel(c,'TA (mmol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+
+bed.Z = -BedM_Irminger_Section.Z;
+h4 = area(BedM_Irminger_Section.lon,bed.Z,basevalue);
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+title('Irminger Sea Section','FontSize',16) 
+
+%% DIC Plots Labrador  
+
+cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Processed')
+load AR6903_DIC_TA_KF.mat
+% Need to reload because of data manipulation below 
+
+lon = []; % lon for plotting
+cast = []; 
+
+for i = 1:length(DIC_casts)
+    lon(i) = DICsum{DIC_casts(i)}.lon(1);
+    cast(i) = DICsum{DIC_casts(i)}.Cast(1);
+    ind_NaN = ~isnan(DICsum{DIC_casts(i)}.DIC); % Find DIC == NaN
+    DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(ind_NaN == 1,:); % Only keep not NaN DIC rows
+    if issorted(DICsum{DIC_casts(i)}.Bottle) == 0
+        [~,b] = sort(DICsum{DIC_casts(i)}.Bottle);
+        DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(b,:);
+    end
+    if min(diff(DICsum{DIC_casts(i)}.Bottle)) == 0
+        ind_rm = find(diff(DICsum{DIC_casts(i)}.Bottle) == 0);
+        DICmean = mean([DICsum{DIC_casts(i)}.DIC(ind_rm) DICsum{DIC_casts(i)}.DIC(ind_rm+1)]);
+        DICsum{DIC_casts(i)}.DIC(ind_rm) = DICmean;
+        DICsum{DIC_casts(i)}(ind_rm+1,:) = [];
+    end
+
+end
+
+ind = [16:20 22:24]; % Labrador Section of DIC casts 
+prs = []; plon = []; 
+DIC = []; TA = [];
+for i = 1:length(ind) 
+    plon(i) = DICsum{DIC_casts(ind(i))}.lon(1);
+    prs{i} = DICsum{DIC_casts(ind(i))}.prs;
+    DIC{i} = DICsum{DIC_casts(ind(i))}.DIC;
+    TA{i} = DICsum{DIC_casts(ind(i))}.TA;
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth_end = 3300; depth_start = 0;
+prs_interp = []; DIC_interp = []; TA_interp = [];
+for i = 1:length(plon) 
+    prs_interp{i} = [depth_end; prs{i}];% 0];
+    DIC_interp{i} = interp1(prs{i},DIC{i},prs_interp{i},'nearest','extrap');
+    TA_interp{i} = interp1(prs{i},TA{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,DIC_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+% set(ax,'clim',[2150 max(DICsum_tbl.DIC)])
+ylabel(c,'DIC (mmol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)
+%% TA Labrador 
+load AR6903_DIC_TA_KF.mat
+
+
+lon = []; % lon for plotting
+cast = []; 
+
+for i = 1:length(DIC_casts)
+    lon(i) = DICsum{DIC_casts(i)}.lon(1);
+    cast(i) = DICsum{DIC_casts(i)}.Cast(1);
+    ind_NaN = ~isnan(DICsum{DIC_casts(i)}.TA); % Find TA == NaN
+    DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(ind_NaN == 1,:); % Only keep not NaN DIC rows
+    if issorted(DICsum{DIC_casts(i)}.Bottle) == 0
+        [~,b] = sort(DICsum{DIC_casts(i)}.Bottle);
+        DICsum{DIC_casts(i)} = DICsum{DIC_casts(i)}(b,:);
+    end
+    if min(diff(DICsum{DIC_casts(i)}.Bottle)) == 0
+        ind_rm = find(diff(DICsum{DIC_casts(i)}.Bottle) == 0);
+        TAmean = mean([DICsum{DIC_casts(i)}.TA(ind_rm) DICsum{DIC_casts(i)}.TA(ind_rm+1)]);
+        DICsum{DIC_casts(i)}.TA(ind_rm) = TAmean;
+        DICsum{DIC_casts(i)}(ind_rm+1,:) = [];
+    end
+
+end
+
+ind = [16:20 22:24]; % Labrador Section of DIC casts  
+prs = []; plon = []; 
+DIC = []; TA = [];
+for i = 1:length(ind) 
+    plon(i) = DICsum{DIC_casts(ind(i))}.lon(1);
+    prs{i} = DICsum{DIC_casts(ind(i))}.prs;
+    DIC{i} = DICsum{DIC_casts(ind(i))}.DIC;
+    TA{i} = DICsum{DIC_casts(ind(i))}.TA;
+end
+
+% Extrapolate one more point at depth for prettier plots 
+depth_end = 3300; depth_start = 0;
+prs_interp = []; DIC_interp = []; TA_interp = [];
+for i = 1:length(plon) 
+    prs_interp{i} = [depth_end; prs{i}];% 0];
+    DIC_interp{i} = interp1(prs{i},DIC{i},prs_interp{i},'nearest','extrap');
+    TA_interp{i} = interp1(prs{i},TA{i},prs_interp{i},'nearest','extrap');
+end
+
+
+fig = figure;
+set(fig,'Position',[100 100 1100 500]) % Set figure size 
+fontsize(fig, 12, "points")
+transect(plon',prs_interp,TA_interp,'interp','pchip')
+ax = gca;
+set(ax,'Fontsize',12)
+c = colorbar;
+% set(ax,'clim',[2250 max(DICsum_tbl.TA)])
+ylabel(c,'TA (mmol kg^-^1)','Fontsize',12)
+ylim([0 3250])
+box off
+xlabel('Longitude (\circW)','Fontsize',13)
+ylabel('Pressure (db)','Fontsize',13)
+hold on
+%Plot bathymetry over everything. 
+basevalue = 3500;
+
+%Plot bathymetry over everything.
+basevalue = 3500;
+bed.Z = -LSea.Z_interp;
+h4 = area(LSea.lat_interp,bed.Z,basevalue);  % lat/lon switched in file
+h4(1).FaceColor = [0.7 0.7 0.7]; %Creates light grey bathymetry
+h4(1).EdgeColor = [0.7 0.7 0.7];
+h4(1).LineWidth = 1;
+
+title('Labrador Sea Section','FontSize',16)

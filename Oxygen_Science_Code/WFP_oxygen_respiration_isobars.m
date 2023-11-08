@@ -1,119 +1,138 @@
-% Working with Hilary's files 
-addpath(genpath('G:\My Drive\Matlab_work\Functions'))
-% cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary')
-% load('cruise_oxygen_output.mat')
-% load('glider_output.mat')
-% load('Irminger_calibratedO2_12July2023.mat')
+% % Working with Hilary's files 
+% addpath(genpath('G:\My Drive\Matlab_work\Functions'))
+
 
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_Sept2023')
-load('glidermerge_output.mat')
+% load('glidermerge_output.mat')
 load('wfpmerge_output.mat')
-pres_grid = [150:1:2600];
-pres_grid_hypm = pres_grid;
+prs = 150:1:2600;
 
 %%
 %Load Kristen's MLD calculated from WFP chl data
 addpath('G:\Shared drives\NSF_Irminger\Data_Files\From_Kristen')
-load MLD_CHL_WFP.mat
-load MLD_CHL_WFP7.mat
+% load MLD_CHL_WFP.mat
+% load MLD_CHL_WFP7.mat
+load('wfp_chl_KF_Sep2023.mat')
 %chldt_mat = datenum(floor(chldt),0,0) + 365*(chldt - floor(chldt));
-chldt_mat = [chldt; chldt7];
-chlmld = [chlmld; chlmld7];
-chlmld(138) = NaN; % Bad data point 
+% chldt_mat = [chldt; chldt7];
+% chlmld = [chlmld; chlmld7];
+% chlmld(138) = NaN; % Bad data point 
+% Linear interpolation of MLD product onto WFP DO timegrid 
+mld_DO_dt = interp1(wfp_chl.dn,wfp_chl.mld_db,wggmerge.time,'linear');
 
-% renames variables
-DOpres = pres_grid_hypm;
+figure
+plot(wggmerge.time,mld_DO_dt)
+axis ij
+grid on
+%%
+
+mld = []; dt =[]; mld_interp = [];
+for yr = 1:length(year(wfp_chl.dn(1)):year(wfp_chl.dn(end)))-1
+    i = 2013 + yr;
+    ind = find(wfp_chl.dn > datenum(i,09,01) & wfp_chl.dn < datenum(i+1,09,01));
+    ind2 = find(wfp_chl.time > datenum(i,09,01) & wfp_chl.time < datenum(i+1,09,01));
+    mld{yr} = wfp_chl.mld_db(ind); 
+    doy{yr} = wfp_chl.dn(ind) - wfp_chl.time(ind2(1));
+    dt{yr} = wfp_chl.dn(ind);
+    dt_interp{yr} = wfp_chl.time(ind2);
+    mld_interp(yr,:) = interp1(wfp_chl.dn(ind),wfp_chl.mld_db(ind),wfp_chl.time(ind2),'linear');
+    doy_interp{yr} = wfp_chl.time(ind2) - wfp_chl.time(ind2(1));
+end
+
+test = interp1(wfp_chl.dn,wfp_chl.mld_db,wfp_chl.time,'linear');
+figure
+plot(wfp_chl.time,movmean(test,5))
+axis ij
+grid on
+
+close all
+for j = 1:8
+figure(1)
+plot(doy{j},mld{j})
+hold on
+% plot(doy_interp{j},smoothdata(mld_interp{j},'loess',21),'Linewidth',1.5)
+axis ij
+grid on
+hold on
+end
+
+% Earliest mld at 200 is about day 70 + 9/1
+% Latest mld at 200 is about day 290 + 9/1
+
+%%
+% Sort oxygen data by time (overlapping deployment issue)
 DOdt = wggmerge.time;
-% DO = wggmerge.doxy_lagcorr.*wfp_profilegain_interp';
 DOwfp = wggmerge.doxy;
 
-% sort oxygen data by time
 [DOdt,index] = sortrows(DOdt,'ascend');
 DOwfp = DOwfp(:,index);
 
-%% Scatter plot with WFP and glider data
+%% Scatter plot with WFP data
 % profilerng = [1:1:3371];
 sz = 1;
 ymax = 2000;
 
-% figure(1); clf %Oxygen concentration
 f = figure;
 f.Position = [100 100 1200 400];
-% C = cmocean('dense'); %set colormap
-% for i = 1:length(glgmerge) % Adds glider data 
-%     glg = glgmerge{i};
-%     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-%     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-%     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% end
-% 
-% for i = 1:length(glgmerge) % Adds glider data 
-%     glg = glgmerge{i};
-%     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-%     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-%     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% end
-
-% [X,Y] = meshgrid(glidermerge.time, 1:1000);
-% scatter(X(:),Y(:),5,glidermerge.doxy(:),'filled'); hold on;
-% hold on
-% doxy_scat = wggmerge.doxy_lagcorr(:,profilerng).*wfp_profilegain_interp(profilerng)';
-[X,Y] = meshgrid(wggmerge.time, pres_grid_hypm);
+[X,Y] = meshgrid(wggmerge.time, prs);
 scatter(X(:),Y(:),5,DOwfp(:),'filled'); hold on;
-
-plot(chldt_mat, chlmld, 'k.','markersize',8); hold on; %Put in Kristen's new MLD data
-
+plot(chldt_mat, chlmld, 'k.','markersize',8); hold on; 
 axis ij; axis tight; xlim([datenum(2014,9,10) datenum(2022,1,1)]); ylim([0 ymax]);
-colormap(C); ylabel('Pressure (db)', 'Fontsize', 14); hcb = colorbar; set(hcb,'location','eastoutside')
+ylabel('Pressure (db)', 'Fontsize', 14); hcb = colorbar; set(hcb,'location','eastoutside')
 datetick('x',2,'keeplimits');
-title('Merged OOI Irminger glider and WFP oxygen concentration', 'Fontsize', 14)
+title('OOI Irminger WFP oxygen concentration', 'Fontsize', 14)
 hcb.Label.String = 'DO (\mumol kg^-^1)';
 hcb.FontSize = 12;
-% hcb.Limits = [260 355];
 box on
-% set(gca,'TickLength',[0.1, 0.01])
 set(gca, 'TickDir', 'out')
-% %%
-% figure(2); clf %Oxygen concentration in PT space 
-% C = cmocean('Dense'); %set colormap
-% % for i = 1:length(glgmerge)
-% %     glg = glgmerge{i};
-% %     [X,Y] = meshgrid(glg.time_start(1:5:end), pres_grid_glider);
-% %     GL_doxy_scat = glg.doxy_lagcorr_grid(:,1:5:end)./nanmean(glgmerge{i}.HYPMalign_stats.O2_presA_deepcor_mean);
-% %     scatter(X(:),Y(:),5,GL_doxy_scat(:),'filled'); hold on;
-% % end
-% doxy_scat_pt = wggmerge.doxy_lagcorr_pt(:,profilerng).*wfp_profilegain_interp(profilerng)';
-% [X,Y] = meshgrid(wggmerge.time(profilerng), pt_grid);
-% scatter(X(:),Y(:),5,doxy_scat_pt(:),'filled'); hold on;
-% 
-% %plot(chldt_mat, chlmld, 'k.','markersize',5); hold on; %Put in Kristen's new MLD data
-% 
-% axis tight; xlim([datenum(2014,9,10) datenum(2022,1,1)]); ylim([1.5 5]);
-% colormap(C); ylabel('PT (\circC)', 'Fontsize', 10); hcb = colorbar; set(hcb,'location','eastoutside')
-% datetick('x',2,'keeplimits');
-% title('Merged OOI Irminger glider and WFP oxygen concentration (\mumol/kg)', 'Fontsize', 12)
+%%
 
+ind250 = find(prs == 250); %ind = find(prs == z);
+ind500 = find(prs == 500);
+ind750 = find(prs == 750);
+ind1000 = find(prs == 1000);
+ind1500 = find(prs == 1500);
+
+figure
+plot(DOdt,DOwfp(ind250,:),'.')
+axis tight; grid on
+datetick('x','KeepLimits')
+figure
+plot(DOdt,DOwfp(ind500,:),'.')
+axis tight; grid on
+datetick('x','KeepLimits')
+figure 
+plot(DOdt,DOwfp(ind750,:),'.')
+axis tight; grid on
+datetick('x','KeepLimits')
+figure
+plot(DOdt,DOwfp(ind1000,:),'.')
+axis tight; grid on
+datetick('x','KeepLimits')
+figure
+plot(DOdt,DOwfp(ind1500,:),'.')
+axis tight; grid on
+datetick('x','KeepLimits')
 
 
 %%
-
+ind250 = [];
+ind500 = [];
+ind750 = [];
+ind1000 = [];
 %%
-prs250 = [];
-prs500 = [];
-prs750 = [];
-prs1000 = [];
+for yr = 1:length(year(DOdt(1)):year(DOdt(end)))-1
+    i = 2014 + yr;
+    ind = find(DOdt > datenum(i,04,01) & DOdt < datenum(i,11,01));
+    figure
+    plot(DOdt(ind),DOwfp(ind250,ind),'.')
+    datetick
 
-% prs250e = [];
-% prs500e = [];
-% prs750e = [];
-% prs1000e = [];
 
-for yr = 1:length(year(chldt_mat(1)):year(chldt_mat(end)))
-    i = 2013 + yr;
-    ind = find(chldt_mat > datenum(i,09,01) & chldt_mat < datenum(i+1,06,01));
-    mld = chlmld(ind); 
-    dt = chldt_mat(ind);
+end
+%%
 
+for yr = 1
     ind250 = find(mld >= 250); %ind250e = find(mld > 250);
     ind500 = find(mld >= 500); %ind500e = find(mld > 500);
     ind750 = find(mld >= 750); %ind750e = find(mld > 750);
@@ -234,7 +253,7 @@ disp('Done')
 yy = [];
 iso = [250; 500; 750; 1000; 1500; 2000; 2400]; % indexed by 1 , 2 , 3, and 4 in figure below. 
 for i = 1:length(iso)
-    DOyy = DO(DOpres == iso(i),:)';
+    DOyy = DO(prs == iso(i),:)';
     yy{i} = smooth(DOdt,DOyy,0.025,'loess');
 end
 %%
@@ -243,9 +262,9 @@ end
 figure(6)
 clf
 subplot(4,1,1)
-plot(DOdt,DO(DOpres == 250,:),'.','Color',grey); hold on
+plot(DOdt,DO(prs == 250,:),'.','Color',grey); hold on
 for i = 1:length(MLD250) 
-    plot(DOdt(MLD250ind{i}),DO(DOpres == 250,MLD250ind{i}),'.','Color',blue)
+    plot(DOdt(MLD250ind{i}),DO(prs == 250,MLD250ind{i}),'.','Color',blue)
 end
 plot(DOdt(1:end-970),yy{1}(1:end-970),'Linewidth',1.5,'Color','k')
 plot(DOdt(2420:end-300),yy{1}(2420:end-300),'Linewidth',1.5,'Color','k')
@@ -258,10 +277,10 @@ title('WFP Oxygen')
 f = gca; f.FontSize = 13;
 
 subplot(4,1,2)
-plot(DOdt,DO(DOpres == 500,:),'.','Color',grey)
+plot(DOdt,DO(prs == 500,:),'.','Color',grey)
 hold on
 for i = 1:length(MLD500) 
-    plot(DOdt(MLD500ind{i}),DO(DOpres == 500,MLD500ind{i}),'.','Color',blue)
+    plot(DOdt(MLD500ind{i}),DO(prs == 500,MLD500ind{i}),'.','Color',blue)
 end
 plot(DOdt(1:end-970),yy{2}(1:end-970),'Linewidth',1.5,'Color','k')
 plot(DOdt(2420:end-300),yy{2}(2420:end-300),'Linewidth',1.5,'Color','k')
@@ -273,10 +292,10 @@ text(datenum(2015,04,01),270,'500 db','FontWeight','bold','FontSize',13.5)
 f = gca; f.FontSize = 13;
 
 subplot(4,1,3)
-plot(DOdt,DO(DOpres == 750,:),'.','Color',grey)
+plot(DOdt,DO(prs == 750,:),'.','Color',grey)
 hold on
 for i = 1:length(MLD750) 
-    plot(DOdt(MLD750ind{i}),DO(DOpres == 750,MLD750ind{i}),'.','Color',blue)
+    plot(DOdt(MLD750ind{i}),DO(prs == 750,MLD750ind{i}),'.','Color',blue)
 end
 plot(DOdt(1:end-970),yy{3}(1:end-970),'Linewidth',1.5,'Color','k')
 plot(DOdt(2420:end-300),yy{3}(2420:end-300),'Linewidth',1.5,'Color','k')
@@ -293,9 +312,9 @@ hold on
 plot(NaN,NaN,'.','Markersize',10,'Color',grey)
 plot(NaN,NaN,'k-','Linewidth',1.5)
 hold on
-plot(DOdt,DO(DOpres == 1000,:),'.','Color',grey)
+plot(DOdt,DO(prs == 1000,:),'.','Color',grey)
 for i = 1:length(MLD1000)
-    plot(DOdt(MLD1000ind{i}),DO(DOpres == 1000,MLD1000ind{i}),'.','Color',blue)
+    plot(DOdt(MLD1000ind{i}),DO(prs == 1000,MLD1000ind{i}),'.','Color',blue)
 end
 plot(DOdt(1:end-970),yy{4}(1:end-970),'Linewidth',1.5,'Color','k')
 plot(DOdt(2420:end-300),yy{4}(2420:end-300),'Linewidth',1.5,'Color','k')
@@ -309,7 +328,7 @@ f = gca; f.FontSize = 13;
 %%
 figure
 subplot(3,1,1)
-plot(DOdt,DO(DOpres == 1500,:),'.','Color',grey)
+plot(DOdt,DO(prs == 1500,:),'.','Color',grey)
 hold on
 plot(DOdt,yy{5},'Linewidth',1.5,'Color','k') 
 % ylim([260 320])
@@ -320,7 +339,7 @@ title('Oxygen at 1500 db')
 f = gca; f.FontSize = 14;
 
 subplot(3,1,2)
-plot(DOdt,DO(DOpres == 2000,:),'.','Color',grey)
+plot(DOdt,DO(prs == 2000,:),'.','Color',grey)
 hold on
 plot(DOdt,yy{6},'Linewidth',1.5,'Color','k')
 % ylim([260 320])
@@ -331,7 +350,7 @@ title('Oxygen at 2000 db')
 f = gca; f.FontSize = 14;
 
 subplot(3,1,3)
-plot(DOdt,DO(DOpres == 2400,:),'.','Color',grey)
+plot(DOdt,DO(prs == 2400,:),'.','Color',grey)
 hold on
 plot(DOdt,yy{7},'Linewidth',1.5,'Color','k')
 % ylim([260 320])
@@ -346,18 +365,18 @@ yyiso = [];
 yyistotest = [];
 iso = 200:10:2400; % Pressure vector
 for ii = 1:length(iso)
-    DOyy = DO(DOpres == iso(ii),:)';
+    DOyy = DO(prs == iso(ii),:)';
     yyiso{ii} = smooth(DOdt,DOyy,0.025,'loess');
     yyisotest(ii,:) = yyiso{ii};
 end
 %%
 PTiso = [];
 for ii = 1:length(iso)
-    PTiso(ii,:) = gsw_pt_from_CT(wggmerge.SA(DOpres ==iso(ii),:),wggmerge.CT(DOpres == iso(ii),:));
+    PTiso(ii,:) = gsw_pt_from_CT(wggmerge.SA(prs ==iso(ii),:),wggmerge.CT(prs == iso(ii),:));
 end
 prhoiso = []; 
 for ii = 1:length(iso)
-    prhoiso(ii,:) = wggmerge.pdens(DOpres == iso(ii),:);
+    prhoiso(ii,:) = wggmerge.pdens(prs == iso(ii),:);
 end
 
     
