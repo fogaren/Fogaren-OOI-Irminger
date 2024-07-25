@@ -377,7 +377,7 @@ for i = 1:length(cast_num)
     fileIDu = fopen(['AR45_' sprintf('%03d',cast_num(i)) 'u.csv'],'w');
     fprintf(fileIDu,fheader);
     for ii = 1:length(up_out.prs)
-        fprintf(fileIDd,'%.1f,%.3f,%d,%.3f,%d,%.4f,%d,%.1f,%d\n', up_out.prs(ii),up_out.t(ii),up_out.temp_flag(ii),up_out.SP(ii),up_out.sal_flag(ii),up_out.oxy_volts(ii),oxycur_flag(ii),up_out.DOcorr_umolkg(ii),ctdoxy_flag(ii));
+        fprintf(fileIDu,'%.1f,%.3f,%d,%.3f,%d,%.4f,%d,%.1f,%d\n', up_out.prs(ii),up_out.t(ii),up_out.temp_flag(ii),up_out.SP(ii),up_out.sal_flag(ii),up_out.oxy_volts(ii),oxycur_flag(ii),up_out.DOcorr_umolkg(ii),ctdoxy_flag(ii));
     end
     fclose(fileIDu);
 end

@@ -13,7 +13,7 @@ dc_dir = 'C:\Users\fogaren\Documents\SBE\AR69-03\downcasts';
 uc_dir = 'C:\Users\fogaren\Documents\SBE\AR69-03\upcasts';
 aaron_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\AR69-03\SOI_Processed';
 
-savefile = 1; % savefile == 1 for saving; savefile == 0, don't save
+savefile = 0; % savefile == 1 for saving; savefile == 0, don't save
 % bcodmo = 0; % write to csv files if == 1
 % bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\AR21';
 %% Read in my processed casts 
@@ -298,7 +298,7 @@ end
 for i = 1:length(cast_num)
     dwn_out = downcasts{cast_num(i)};
     
-%     temp_flag = ones(size(dwn_out.t))*2; % Incorporated Aaron's WOCE flags
+    temp_flag = ones(size(dwn_out.t))*1; % Reset all Temp Flags to 1
 %     sal_flag = ones(size(dwn_out.t))*2;
     oxycur_flag = ones(size(dwn_out.t))*2;
     ctdoxy_flag = ones(size(dwn_out.t))*2;
@@ -372,7 +372,7 @@ end
 for i = 1:length(cast_num)
     up_out = upcasts{cast_num(i)};
 
-%     temp_flag = ones(size(up_out.t))*2; % Incorporated Aarons's WOCE flags
+    temp_flag = ones(size(up_out.t))*1; % Reset all temp flags to 1 
 %     sal_flag = ones(size(up_out.t))*2;
     oxycur_flag = ones(size(up_out.t))*2;
     ctdoxy_flag = ones(size(up_out.t))*2;
@@ -395,7 +395,7 @@ for i = 1:length(cast_num)
     fileIDu = fopen(['AR69-03_' sprintf('%03d',cast_num(i)) 'u.csv'],'w');
     fprintf(fileIDu,fheader);
     for ii = 1:length(up_out.prs)
-        fprintf(fileIDd,'%.1f,%.3f,%d,%.3f,%d,%.4f,%d,%.1f,%d\n', up_out.prs(ii),up_out.t(ii),up_out.temp_flag(ii),up_out.SP(ii),up_out.sal_flag(ii),up_out.oxy_volts(ii),oxycur_flag(ii),up_out.DOcorr_umolkg(ii),ctdoxy_flag(ii));
+        fprintf(fileIDu,'%.1f,%.3f,%d,%.3f,%d,%.4f,%d,%.1f,%d\n', up_out.prs(ii),up_out.t(ii),up_out.temp_flag(ii),up_out.SP(ii),up_out.sal_flag(ii),up_out.oxy_volts(ii),oxycur_flag(ii),up_out.DOcorr_umolkg(ii),ctdoxy_flag(ii));
     end
     fclose(fileIDu);
 end
