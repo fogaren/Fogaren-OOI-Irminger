@@ -437,11 +437,13 @@ plot(wggmerge.time,aa,'.')
 hold on
 % plot(wggmerge.time,bb,'.')
 % plot(wggmerge.time,cc,'.')
-plot(wggmerge.time,dd,'.')
+% plot(wggmerge.time,dd,'.')
 plot(wfp_chl.time,wfp_chl.mld_db_time,'.k')
 axis ij
 grid on
 datetick
+ylim([200 1800])
+legend('Temp','Chl')
 %%
 figure
 for i = 1:length(dd)

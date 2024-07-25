@@ -373,11 +373,21 @@ function cast = process_cast(leah_cast,mycast,CTD_sen,cal,SOC_type,CruiseStartTi
     cast.CTD_sen = ones(length(cast.prs),1)*CTD_sen; 
     cast.cruise_d = datenum(cast.StartTimeUTC) - datenum(CruiseStartTime); % Cruise time in days 
     
+    if SOC_type == 0 % Seabird factory calibration
+        
+        x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs];
+    
+        % SBE functional form without SOC drift 
+        cast.DOcorr_umolkg = cal.SOC*(x(:,1) + cal.VOFFSET).*x(:,2)...
+        .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+        .*exp((cal.E*x(:,4))./(x(:,3) + 273.15));
+    end   
+
     if SOC_type == 1 % Constant SOC value
 
         x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs];
     
-        % SBE functional form without SOC drift 
+        % SBE functional form without constant SOC
         cast.DOcorr_umolkg = cal.SOCcalc*(x(:,1) + cal.VOFFSET).*x(:,2)...
         .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
         .*exp((cal.Ecalc*x(:,4))./(x(:,3) + 273.15));

@@ -1,34 +1,32 @@
 % Set up workspace 
-clearvars; close all
+clearvars
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird_Oxygen_Toolbox')
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird-Toolbox')
 addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
-run('GeneralSettings.m') % For colors
+run('GeneralSettings.m')
 
-% Read in salinity calibrated bottle files, Winkler sample values and oxygen files
-% processed with SBE default hysteresis correction and no tau correction 
+% Read in calibrated bottle files, Winkler sample values and oxygen files
+% processed with default hysteresis correction and user-determined time lag
+% correction 
 btl_dir = 'C:\Users\fogaren\Documents\Python\Bottle_Files\AR69-03'; % my processed bottle product 
 samp_dir = 'C:\Users\fogaren\Documents\Python\Bottle_Files\AR69-03'; % processed SBE cnvs
 Winkler_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\AR69-03';
 Winkler_file = 'AR69_03_winklers_finalized_KF.xlsx';
 
 filesave = 0; % filesave == 1, save calibration output as mat file
-
-% Use Bottle samples to calculate new SOC (gain) and E terms for CTD data
-% Determined during CTD salinity calibration 
+% Use Bottle samples to calculate new SOC (gain) and E terms for CTD data 
 CTD_sen = 1; % Use primary or secondary CTD temp and sal
 
-% Read in Winkler values, my processed bottle files and salinity calibrated bottle files and combine them
+% Read in Winkler values, my processed bottle files and Leah's calibrated files and combine them
 cd(Winkler_dir)
 Winklers = readtable(Winkler_file,'TextType','string');
 Winklers.Winkler1_mLL = double(Winklers.Winkler1_mLL);
 Winklers.Winkler2_mLL = double(Winklers.Winkler2_mLL);
 Winklers.Winkler3_mLL = double(Winklers.Winkler3_mLL);
 
-%% Read in calibrated CTD data from netcdfs (this changes depending on who processed the salinity data) 
+%% Read in calibrated CTD data from netcdfs 
 cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\AR69-03\SOI_Processed')
 btlfile = readtable('bottle_data.csv','FileType','text');
-
 vars = {'SSSCC','BTLNBR','CTDPRS','CTDTMP1','CTDTMP2','CTDCOND1','CTDCOND2','CTDSAL','BTL_SAL','CTDOXY',...
     'BTL_OXY','CTDOXY1','CTDOXYVOLTS'};
 btlfile = btlfile(:,vars);
@@ -36,14 +34,14 @@ newvars = {'Station','Bottle','CTDPRS','CTDTMP1','CTDTMP2','CTDCOND1','CTDCOND2'
     'BTL_OXY_umolkg','CTDOXY1_mLL','CTDOXYVOLTS'};
 btlfile.Properties.VariableNames = newvars;
 btlfile.CTDCOND1 = btlfile.CTDCOND1/10; btlfile.CTDCOND2 = btlfile.CTDCOND2/10; % Change cond units 
-
 btlfile = btlfile(2:end,:);
 for i = 1:height(btlfile)
     if btlfile.Bottle(i) > 13 % Difference in how bottles were counted on cruise
         btlfile.Bottle(i) = btlfile.Bottle(i)-4;
     end
 end
-
+% btlfile.CTDcal(:) = {'True'};
+% btlfile.CTDcal = string(btlfile.CTDcal);
 btl_num = unique(btlfile.Station); % Stations with bottles 
 
 siobtl = [];
@@ -51,7 +49,7 @@ for i = 1:length(btl_num)
     ind = find(btlfile.Station == btl_num(i));
     siobtl{btl_num(i)} = btlfile(ind,:);
 end
-%% Create bottle summary indexed by cast number and table with all data 
+%%
 cd(btl_dir)
 mybtlfiles = ls('*.csv'); % List of my processed bottle files 
 btlcasts = str2num(mybtlfiles(:,9:11)); % Pulls out cast numbers that have bottle files 
@@ -63,16 +61,19 @@ for i = 1:length(Wink_casts) % Number of Stations with bottles
     btlsum{Wink_casts(i)} = combine_btl_files(siobtl{Wink_casts(i)},mybtlfiles(ind,:),Winklers(Winklers.Cast == Wink_casts(i),:),CTD_sen) ;
 end
 
+
+%%
+
 btlsum_tbl = [];
 for i = 1:length(Wink_casts)
     btlsum_tbl = [btlsum_tbl; btlsum{Wink_casts(i)}];
 end
-
+% %%
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
-%% *** same sensor for all casts ***
+%% same sensor for all casts 
 % From SBE factory calibration 
 % Serial number 1960, 31-Jul-21
 cal.SOC = 4.46780e-001;
@@ -87,20 +88,19 @@ cal.SERIALNO = '1960';
 cal.OCALDATE = '31-Jul-21';
 
 H = [-0.033, 5000, 1450]; % Default 
-%% Look at Winklers versus CTD-DO from factory calibration 
 
-% Calculate oxygen concentration with SBE factory calibration 
 x = [btlsum_tbl.oxy_volts,btlsum_tbl.O2sol_umolkg,btlsum_tbl.t,btlsum_tbl.prs];
 DOuncorr_umolkg = cal.SOC*(x(:,1) + cal.VOFFSET).*x(:,2)...
   .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
   .*exp((cal.E*x(:,4))./(x(:,3) + 273.15));
 
+%%
 f = figure;
 f.Position = [100 100 840 500];
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+plot(btlsum_tbl.prs, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.b','Markersize',20)
 plot(btlsum_tbl.prs, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
@@ -109,18 +109,22 @@ grid on
 
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
-plot(btlsum_tbl.Cast, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
-plot(btlsum_tbl.Cast, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.Cast, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.b','Markersize',20)
+% plot(btlsum_tbl.Cast, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+% plot(btlsum_tbl.lat, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.lat, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+% plot(btlsum_tbl.lat, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
+% xlabel('Latitude (\circ)')
 ylim([5 25])
 grid on
 
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+plot(btlsum_tbl.t, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.b','Markersize',20)
 plot(btlsum_tbl.t, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
@@ -130,7 +134,7 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, btlsum_tbl.Winkler1_umolkg - DOuncorr_umolkg,'.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
+plot(btlsum_tbl.Winkler2_umolkg, btlsum_tbl.Winkler2_umolkg - DOuncorr_umolkg,'.b','Markersize',20)
 plot(btlsum_tbl.Winkler3_umolkg, btlsum_tbl.Winkler3_umolkg - DOuncorr_umolkg,'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
@@ -138,18 +142,19 @@ ylim([5 25])
 grid on
 sgtitle('AR69-03: Factory Calibrated CTD-DO vs Winklers')
 
-%% non linear multiple regression using SBE functional form 
-
+%% non linear multiple regression using just Winklers1
 % Oxygen solubility calculated using GSW Toolbox 
-% Treats Winkler replicates as individual points (no averaging of Winklers)
+% Model variables 
+% Treats Winklers as individual points 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast]; % For output
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle]; % For 
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg]; % Replicates
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % SBE functional form 
 modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -161,45 +166,77 @@ beta0 = [cal.SOC 0]; % Starting values for coefficient iterations
 % Non linear multiple regression to get b1 (SOC) and b2 (E term) from SBE
 % functional form using all Winklers_umolkg (from calibrated T/S data) 
 % Run non linear model fit with all Winkler/CTD oxygen (volts) values
-% Repeat until all outliers are removed 
+mdl1 = fitnlm(X,Winklers_to_use,modelfun,beta0)
 
-% Find outliers based on median filter it = 1 
-mdl1 = fitnlm(X,Winklers_to_use,modelfun,beta0);
+figure
+histfit(mdl1.Residuals.raw)
+title('SOC_k Residuals with Outliers, it = 1')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 2 
 Winkler_outliers1 = find(isoutlier(mdl1.Residuals.Raw,'median') == 1);
-% Exclude outliers from NLMR model 
-mdl2 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers1);
+mdl2 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers1)
+
+figure
+histfit(mdl2.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 2')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 3 
 ind = find(isoutlier(mdl2.Residuals.raw,'median') == 1);
 Winkler_outliers2 = [ind; Winkler_outliers1];
 % Exclude outliers from NLMR model 
-mdl3 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers2);
+mdl3 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers2)
+
+figure
+histfit(mdl3.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 3')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 4 
 ind = find(isoutlier(mdl3.Residuals.raw,'median') == 1);
 Winkler_outliers3 = [ind; Winkler_outliers2];
 % Exclude outliers from NLMR model 
-mdl4 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers3);
+mdl4 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers3)
+
+figure
+histfit(mdl4.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 4')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 5 
 ind = find(isoutlier(mdl4.Residuals.raw,'median') == 1);
 Winkler_outliers4 = [ind; Winkler_outliers3];
 % Exclude outliers from NLMR model 
-mdl5 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers4);
+mdl5 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers4)
+
+figure
+histfit(mdl5.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 5')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 6 
 ind = find(isoutlier(mdl5.Residuals.raw,'median') == 1);
 Winkler_outliers5 = [ind; Winkler_outliers4];
 % Exclude outliers from NLMR model 
-mdl6 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers5);
+mdl6 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers5)
+
+figure
+histfit(mdl6.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 6')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
 
 % Find outliers based on median filter it = 7 
 ind = find(isoutlier(mdl6.Residuals.raw,'median') == 1);
 Winkler_outliers6 = [ind; Winkler_outliers5];
 % Exclude outliers from NLMR model 
-mdl7 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers6);
+mdl7 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers6)
 
 figure
 histfit(mdl7.Residuals.Raw)
@@ -217,18 +254,17 @@ cal.Winkler2_outliers = Winkler_outliers6(Winkler_outliers6 > height(btlsum_tbl)
 cal.Winkler3_outliers = Winkler_outliers6(Winkler_outliers6 > 2*height(btlsum_tbl) & Winkler_outliers6 < 3*height(btlsum_tbl)) - 2*height(btlsum_tbl);
 cal.casts = 1:214;
 cal.mdl = mdl7;
-% To identify outliers 
 cal.out_NLMR = sortrows([bad_casts(Winkler_outliers6) btl_check(Winkler_outliers6) Winklers_to_use(Winkler_outliers6)],[1 2]);
 cal_all = cal;
 clear cal; 
-%% Plot of residuals with updates Calibration Coefficients
+%%
 f = figure;
 f.Position = [100 100 840 500];
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -236,8 +272,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -245,8 +281,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -254,28 +290,24 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_k fit, whole cruise as one Group')
+sgtitle('AR69-03: SOC_k Winklers1 from whole Cruise')
 %% Deep Group Use deep casts to calculate E term 
-% Decided to only use Winklers from deep casts to calculate E term for the entire cruise
-
-deep = [2:24 38 70:71 78 86:95 106:107 113:126 133 154:155 196:199 207:210];
+deep = [2:24 38 70:71 78 86:95 106:107 113:126 133 154:155 196:199 207:210];%[1 25:37 39:69 72:77 79:85 96:105 108:112 127:132 134:153 156:195 200:206];
 % Use deep casts to calculate E term. 
-good = deep; % good = casts used in Calibration 
+good = deep;
 
 btlsum_tbl = [];
 for i = 1:length(good)
     btlsum_tbl = [btlsum_tbl; btlsum{good(i)}];
 end
-
-% 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % same sensor for all casts 
 % From SBE factory calibration 
@@ -291,19 +323,19 @@ cal.INSTRUMENT_TYPE = 'SBE43';
 cal.SERIALNO = '1960';
 cal.OCALDATE = '31-Jul-21';
 
-%% non linear multiple regression 
+%% non linear multiple regression to calculate E from deep casts only 
 % Oxygen solubility calculated using GSW Toolbox 
 % Model variables 
 % Treats Winklers as individual points 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % SBE functional form 
 modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -412,8 +444,8 @@ f.Position = [100 100 840 500];
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -421,8 +453,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -430,8 +462,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -439,12 +471,12 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_k Winklers from Deep Group')
+sgtitle('AR69-03: SOC_k Winklers1 from Deep Group')
 
 
 %% Group 1 SOC k, E from Deep Group (cal_deep.Ecalc)
@@ -471,8 +503,8 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % non linear multiple regression 
 % Oxygen solubility calculated using GSW Toolbox 
@@ -480,14 +512,14 @@ btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 % Treats Winklers as individual points 
 % Use E term calculated using deep Winklers 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % % SBE functional form 
 % modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -605,8 +637,8 @@ f.Position = [100 100 840 500];
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -614,8 +646,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -623,8 +655,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -632,12 +664,12 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_k Winklers from Group 1')
+sgtitle('AR69-03: SOC_k Winklers1 from Group 1')
 
 %% Group 2 Irminger Section SOC dt; E term calc from Deep Group  
 
@@ -663,22 +695,22 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % Calculate drift with variable SOC with time 
 dt = datenum(btlsum_tbl.Date) - datenum(btlsum_tbl.Date(1)); % minus first cast time
 
-X_dt = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs],...
-    [dt; dt; dt]];
+X_dt = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs],...
+    [dt]];
 
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 
 % SBE functional form with SOC as a function of station 
@@ -771,8 +803,8 @@ figure(8)
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -780,8 +812,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -789,8 +821,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -798,16 +830,17 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_d_t Winklers from Group 2')
+sgtitle('AR69-03: SOC_d_t Winklers1 from Group 2')
 
 % For range of SOC
 cal2.SOCcalc_dt
 days(btlsum_tbl.Date(end) - btlsum_tbl.Date(1))*cal2.SOCrate_dt + cal2.SOCcalc_dt
+cal2.SOCcalc_dt/cal2.SOC
 (days(btlsum_tbl.Date(end) - btlsum_tbl.Date(1))*cal2.SOCrate_dt + cal2.SOCcalc_dt)/cal2.SOC
 %% Group 3 SOC k, E from deep Group 
 
@@ -833,8 +866,8 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % non linear multiple regression 
 % Oxygen solubility calculated using GSW Toolbox 
@@ -842,14 +875,14 @@ btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 % Treats Winklers as individual points 
 % Use E term calculated using deep Winklers 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % % SBE functional form 
 % modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -968,8 +1001,8 @@ figure(8)
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -977,8 +1010,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -986,8 +1019,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -995,12 +1028,12 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_k Winklers from Group 3')
+sgtitle('AR69-03: SOC_k Winklers1 from Group 3')
 
 %% Group 4 SOC k, E from deep Group 
 
@@ -1026,8 +1059,8 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % non linear multiple regression 
 % Oxygen solubility calculated using GSW Toolbox 
@@ -1035,14 +1068,14 @@ btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 % Treats Winklers as individual points 
 % Use E term calculated using deep Winklers 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % % SBE functional form 
 % modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -1157,12 +1190,12 @@ clear cal;
 
 f = figure;
 f.Position = [100 100 840 500];
-% figure(8)
+figure(8)
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -1170,8 +1203,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -1179,8 +1212,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -1188,12 +1221,12 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
-sgtitle('AR69-03: SOC_k Winklers from Group 4')
+sgtitle('AR69-03: SOC_k Winklers1 from Group 4')
 
 %% Group 5 Labrador Section SOC dt; E term calc from Deep Group  
 
@@ -1220,22 +1253,22 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % Calculate drift with variable SOC with time 
 dt = datenum(btlsum_tbl.Date) - datenum(btlsum_tbl.Date(1)); % minus first cast time
 
-X_dt = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs],...
-    [dt; dt; dt]];
+X_dt = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs],...
+    [dt]];
 
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 
 % SBE functional form with SOC as a function of station 
@@ -1324,12 +1357,13 @@ clear cal;
 
 f = figure;
 f.Position = [100 100 840 500];
-% figure(8)
+figure(8)
+
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -1337,8 +1371,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -1346,8 +1380,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -1355,8 +1389,8 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
@@ -1382,8 +1416,7 @@ cal.INSTRUMENT_TYPE = 'SBE43';
 cal.SERIALNO = '1960';
 cal.OCALDATE = '31-Jul-21';
 
-% group6 = 100:172; % lab section 2 SOCk
-group6 = 173:210; % testing 7 with SOCk
+group6 = 100:172; % lab section 2 SOCk
 good = group6;
 btlsum_tbl = [];
 for i = 1:length(good)
@@ -1391,8 +1424,8 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % non linear multiple regression 
 % Oxygen solubility calculated using GSW Toolbox 
@@ -1400,14 +1433,14 @@ btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 % Treats Winklers as individual points 
 % Use E term calculated using deep Winklers 
  
-X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs]];
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 % % SBE functional form 
 % modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
@@ -1522,12 +1555,12 @@ clear cal;
 
 f = figure;
 f.Position = [100 100 840 500];
-% figure(8)
+figure(8)
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -1535,8 +1568,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -1544,8 +1577,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -1553,8 +1586,8 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_k.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_k.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
@@ -1585,22 +1618,22 @@ for i = 1:length(good)
 end
 
 btlsum_tbl.Winkler1_umolkg(btlsum_tbl.Winkler1_umolkg > 316) = NaN;
-btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
-btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.Winkler2_umolkg > 316) = NaN;
+% btlsum_tbl.Winkler3_umolkg(btlsum_tbl.Winkler3_umolkg > 316) = NaN;
 
 % Calculate drift with variable SOC with time 
 dt = datenum(btlsum_tbl.Date) - datenum(btlsum_tbl.Date(1)); % minus first cast time
 
-X_dt = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
-    [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
-    [btlsum_tbl.t; btlsum_tbl.t; btlsum_tbl.t],...
-    [btlsum_tbl.prs; btlsum_tbl.prs; btlsum_tbl.prs],...
-    [dt; dt; dt]];
+X_dt = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs],...
+    [dt]];
 
-bad_casts = [btlsum_tbl.Cast; btlsum_tbl.Cast; btlsum_tbl.Cast];
-btl_check = [btlsum_tbl.Bottle; btlsum_tbl.Bottle; btlsum_tbl.Bottle];
-Winklers_to_use = [btlsum_tbl.Winkler1_umolkg; btlsum_tbl.Winkler2_umolkg; btlsum_tbl.Winkler3_umolkg];
-pdens = [btlsum_tbl.prho; btlsum_tbl.prho; btlsum_tbl.prho];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+Winklers_to_use = [btlsum_tbl.Winkler1_umolkg];
+pdens = [btlsum_tbl.prho];
 
 
 % SBE functional form with SOC as a function of station 
@@ -1693,8 +1726,8 @@ figure(8)
 %Plot residuals versus pressure 
 subplot(2,2,1)
 plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.prs, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Pressure (db)')
 grid on
@@ -1702,8 +1735,8 @@ grid on
 %Plot residuals versus cast number/time 
 subplot(2,2,2)
 plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Cast, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Station Number')
 grid on
@@ -1711,8 +1744,8 @@ grid on
 %Plot residuals versus temperature 
 subplot(2,2,3)
 plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.t, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Temperature (\circC)')
 grid on
@@ -1720,8 +1753,8 @@ grid on
 %Plot residuals versus oxygen concentration 
 subplot(2,2,4)
 plot(btlsum_tbl.Winkler1_umolkg, mdlcal_dt.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
-plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
-plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler2_umolkg, mdlcal_dt.Residuals.raw(height(btlsum_tbl)+1:(height(btlsum_tbl)*2)),'.k','Markersize',20)
+% plot(btlsum_tbl.Winkler3_umolkg, mdlcal_dt.Residuals.raw((height(btlsum_tbl)*2+1):end),'.k','Markersize',20)
 ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
 xlabel('Winkler DO (\mumol/kg)')
 grid on
@@ -1807,15 +1840,57 @@ btlcasts = unique(btlsum_tbl.Cast);
 for i = 1:length(btlcasts)% Number of bottle summary files 
     btlsum{btlcasts(i)} = btlsum_tbl(btlsum_tbl.Cast == btlcasts(i),:);
 end
-
 %%
+f = figure;
+f.Position = [100 100 840 500];
+%Plot residuals versus pressure 
+subplot(2,2,1)
+plot(btlsum_tbl.prs(btlsum_tbl.NLMR_Outlier1 == 2), btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier1 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier1 == 2),'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.prs(btlsum_tbl.NLMR_Outlier2 == 2), btlsum_tbl.Winkler2_umolkg(btlsum_tbl.NLMR_Outlier2 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier2 == 2),'.k','Markersize',20);
+% plot(btlsum_tbl.prs(btlsum_tbl.NLMR_Outlier3 == 2), btlsum_tbl.Winkler3_umolkg(btlsum_tbl.NLMR_Outlier3 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier3 == 2),'.k','Markersize',20);
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Pressure (db)')
+ylim([-4 4])
+grid on
 
-cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\AR69-03')
-btlsum_tbl_AR6903 = btlsum_tbl; 
-btlsum_AR6903 = btlsum; 
-clear cal btlsum btlsum_tbl
-% cd(samp_dir)
-save AR6903_DOcal.mat btlsum_* cal*
+%Plot residuals versus cast number/time 
+subplot(2,2,2)
+plot(btlsum_tbl.Cast(btlsum_tbl.NLMR_Outlier1 == 2), btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier1 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier1 == 2),'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.Cast(btlsum_tbl.NLMR_Outlier2 == 2), btlsum_tbl.Winkler2_umolkg(btlsum_tbl.NLMR_Outlier2 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier2 == 2),'.k','Markersize',20);
+% plot(btlsum_tbl.Cast(btlsum_tbl.NLMR_Outlier3 == 2), btlsum_tbl.Winkler3_umolkg(btlsum_tbl.NLMR_Outlier3 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier3 == 2),'.k','Markersize',20);
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Station Number')
+ylim([-4 4])
+grid on
+
+%Plot residuals versus temperature 
+subplot(2,2,3)
+plot(btlsum_tbl.t(btlsum_tbl.NLMR_Outlier1 == 2), btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier1 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier1 == 2),'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.t(btlsum_tbl.NLMR_Outlier2 == 2), btlsum_tbl.Winkler2_umolkg(btlsum_tbl.NLMR_Outlier2 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier2 == 2),'.k','Markersize',20); 
+% plot(btlsum_tbl.t(btlsum_tbl.NLMR_Outlier3 == 2), btlsum_tbl.Winkler3_umolkg(btlsum_tbl.NLMR_Outlier3 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier3 == 2),'.k','Markersize',20); 
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Temperature (\circC)')
+ylim([-4 4])
+grid on
+
+%Plot residuals versus oxygen concentration 
+subplot(2,2,4)
+plot(btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier1 == 2), btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier1 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier1 == 2),'.k','Markersize',20); hold on;
+% plot(btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier2 == 2), btlsum_tbl.Winkler2_umolkg(btlsum_tbl.NLMR_Outlier2 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier2 == 2),'.k','Markersize',20);
+% plot(btlsum_tbl.Winkler1_umolkg(btlsum_tbl.NLMR_Outlier3 == 2), btlsum_tbl.Winkler3_umolkg(btlsum_tbl.NLMR_Outlier3 == 2) - btlsum_tbl.DOcorr_umolkg(btlsum_tbl.NLMR_Outlier3 == 2),'.k','Markersize',20);
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Winkler DO (\mumol/kg)')
+ylim([-4 4])
+grid on
+sgtitle('AR69-03: Calibrated CTD-DO vs Winklers1')
+%%
+% % % % % 
+% % % % % cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\AR69-03')
+% % % % % btlsum_tbl_AR6903 = btlsum_tbl; 
+% % % % % btlsum_AR6903 = btlsum; 
+% % % % % clear cal btlsum btlsum_tbl
+% % % % % % cd(samp_dir)
+% % % % % save AR6903_DOcal.mat btlsum_* cal*
 
 %
 %%

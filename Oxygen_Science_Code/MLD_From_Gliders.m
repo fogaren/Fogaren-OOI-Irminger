@@ -117,7 +117,7 @@ for j = ind(1):ind(end)
     sgtitle([datestr(glidermerge.time(j)) ', prof num = ' num2str(j)])
     linkaxes([ax5 ax4 ax3 ax2 ax1],'y')
 
-%     pause % If want to step thru each profile
+     pause % If want to step thru each profile
 %     M1(j-ind(1)+1) = getframe(gcf); %Endable to make movie 
 end
 
