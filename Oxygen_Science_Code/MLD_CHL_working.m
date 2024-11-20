@@ -111,7 +111,7 @@ plot(wggmerge_fl.time,MLchl_db,'.k')
 axis ij
 % shading interp
 datetick
-% cmocean('algae')
+cmocean('algae')
 colorbar
 
 % figure

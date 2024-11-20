@@ -8,6 +8,7 @@ clearvars
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird_Oxygen_Toolbox')
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird-Toolbox')
 addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
+addpath(genpath('G:\My Drive\Matlab_work\Github\GSW-Matlab'))
 
 % Read in calibrated bottle files, Winkler sample values and oxygen files
 % processed with default hysteresis correction and user-determined time lag

@@ -1,0 +1,94 @@
+clearvars
+addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
+addpath('G:\My Drive\Matlab_work\Github\Sea-Bird_Oxygen_Toolbox')
+addpath('G:\My Drive\Matlab_work\Github\Sea-Bird-Toolbox')
+addpath(genpath('G:\My Drive\Matlab_work\Github\GSW-Matlab'))
+
+%%
+clearvars
+cd('C:\Users\fogaren\Desktop\Irminger_2024\sbe_proc_24hz') % location of cnv files on computer 
+a1 = 4; a2 = 5; a3 = 6; % Timelags you want to try 
+
+files = ls('*.cnv');
+cast = [];
+for i = 1:length(files)
+    cast = readSBScnv(files(i,:));
+    if max(cast.pm) > 250 % Only looks at casts deeper than 250
+        align_CTD_DO(cast,a1,a2,a3)
+    end
+end
+%%
+function align_CTD_DO(cast,a1,a2,a3) 
+
+cast.pm(cast.pm < 0) = 0; % Sets neg values to 0 for GSW processing
+lon = 135;
+lat = 60;
+% can look at oxygen in pot. temp or density space 
+SP1 = gsw_SP_from_C(cast.c0mScm,cast.t090C,cast.pm);
+SA1 = gsw_SA_from_SP(SP1,cast.pm,lon,lat);
+CT1 = gsw_CT_from_t(SA1,cast.t090C,cast.pm);
+SP2 = gsw_SP_from_C(cast.c1mScm,cast.t190C,cast.pm);
+SA2 = gsw_SA_from_SP(SP2,cast.pm,lon,lat);
+CT2 = gsw_CT_from_t(SA2,cast.t190C,cast.pm);
+
+cast.pt1 = gsw_pt_from_CT(SA1,CT1); 
+cast.prho1 = gsw_rho_CT_exact(SA1,CT1,0);
+cast.pt2 = gsw_pt_from_CT(SA2,CT2); 
+cast.prho21 = gsw_rho_CT_exact(SA2,CT2,0);
+
+CastString = ['Cast: ' cast.source(end-6:end-4)]; 
+
+% Function from Sea-Brid-Toolbox 
+cast.DO1_a1v = SBE_alignCTDW(cast.sbeox0V, a1, 1/24 );
+cast.DO1_a2v = SBE_alignCTDW(cast.sbeox0V, a2, 1/24 );
+cast.DO1_a3v = SBE_alignCTDW(cast.sbeox0V, a3, 1/24 );
+
+% Function from Sea-Brid-Toolbox 
+cast.DO2_a1v = SBE_alignCTDW(cast.sbeox1V, a1, 1/24 );
+cast.DO2_a2v = SBE_alignCTDW(cast.sbeox1V, a2, 1/24 );
+cast.DO2_a3v = SBE_alignCTDW(cast.sbeox1V, a3, 1/24 );
+
+pres = 25; % To remove surface noise from plots 
+
+figure('Position',[ 100 50 1200 600]);
+subplot(1,6,1)
+plot(cast.prho1(cast.pm >= pres),cast.pm(cast.pm >= pres))
+axis ij
+ylabel('Pressure')
+xlabel('Pot. Density')
+
+subplot(1,6,2)
+plot(cast.sbeox0V(cast.pm >= pres),cast.pm(cast.pm >= pres))
+axis ij
+xlabel('Oxygen (V)')
+
+subplot(1,6,3)
+% plot(cast.sbeox0V(cast.pm >= pres),cast.pt(cast.pm >= pres))
+plot(cast.sbeox1V(cast.pm >= pres),cast.prho1(cast.pm >= pres))
+ylabel('Pot. Density')
+xlabel('DO (V)')
+title('0 sec align')
+
+subplot(1,6,4)
+% plot(cast.DO_a1v(cast.pm >= pres),cast.pt(cast.pm >= pres))
+plot(cast.DO2_a1v(cast.pm >= pres),cast.prho1(cast.pm >= pres))
+ylabel('Pot. Density')
+xlabel('DO (V)')
+title([num2str(a1) ' sec align'])
+
+subplot(1,6,5)
+% plot(cast.DO_a2v(cast.pm >= pres),cast.pt(cast.pm >= pres))
+plot(cast.DO2_a2v(cast.pm >= pres),cast.prho1(cast.pm >= pres))
+ylabel('Pot. Density')
+xlabel('DO (V)')
+title([num2str(a2) ' sec align'])
+
+subplot(1,6,6)
+% plot(cast.DO_a3v(cast.pm >= pres),cast.pt(cast.pm >= pres))
+plot(cast.DO2_a3v(cast.pm >= pres),cast.prho1(cast.pm >= pres))
+ylabel('Pot. Density')
+xlabel('DO (V)')
+title([num2str(a3) ' sec align'])
+sgtitle(CastString)
+
+end

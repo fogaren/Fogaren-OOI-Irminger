@@ -20,8 +20,16 @@ addpath(genpath('G:\My Drive\Matlab_work\Github\cmocean'))
 cd('G:\My Drive\Matlab_work\BC')
 run('GeneralSettings.m') %for plotting 
 % %% Figure 2
-
-
+blended_mld_daily_all.dn = datenum(blended_mld_daily_all.time);
+figure
+% plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'ok','MarkerSize',2,'MarkerFaceColor','k')
+plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'-.','Color',blue)
+hold on
+% plot([blended_mld_daily_all.dn(1) blended_mld_daily_all.dn(end)],[200 200],'k--')
+axis ij
+ylim([100 400])
+grid on
+%
 %% Oxygen timeseries with mixed layer depths 
 prs_grid = 1:2600;
 [X2,Y2] = meshgrid(daily.time,prs_grid);
@@ -88,7 +96,8 @@ datetick('x','yyyy')
 ylabel({'chl-a' '(\mug L^-^1)'},'Fontsize',12)
 ax1.FontSize = 12;
 xlim([datenum(2015,01,01) datenum(2022,04,01)])
-
+%%
+tic 
 % Backscatter timeseries with mixed layer depths 
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_March2024')
 load('wfpmerge_output_fixedPc1600db.mat','wggmerge_fl');
@@ -100,13 +109,19 @@ spikes = wggmerge_fl.spikes;
 
 subplot(3,1,[2 3])
 % scatter(X2(~isnan(wggmerge_fl.spikes)),Y2(~isnan(wggmerge_fl.spikes)),5,wggmerge_fl.spikes(~isnan(wggmerge_fl.spikes)),'filled')
-% scatter(X2(~isnan(spikes)),Y2(~isnan(spikes)),2,wggmerge_fl.spikes(~isnan(spikes)),'filled')
-scatter(X2(~isnan(spikes)),Y2(~isnan(spikes)),2,wggmerge_fl.chla(~isnan(spikes)),'filled')
+scatter(X2(~isnan(spikes)),Y2(~isnan(spikes)),2,wggmerge_fl.spikes(~isnan(spikes)),'filled')
 hold on; axis ij; box on
 plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'ok','MarkerSize',2,'MarkerFaceColor','k')
+% for j = 1:length(mld_max_ind)-1
+% %     plot(dt(mld_max_ind(j):mld_max_ind(j+1)),ones(1,length(mld_max_ind(j):mld_max_ind(j+1)))*1800,'k')
+%     dt_text = round((mld_max_ind(j+1) - mld_max_ind(j))/2) + mld_max_ind(j);
+%     text(blended_mld_daily_all.dn(dt_text)-108,2100,['Year ' num2str(j)],'Fontsize',12,'FontWeight','bold')
+% end
+% for j = 1:length(mld_max_ind)
+%     plot(blended_mld_daily_all.dn(mld_max_ind(j))*ones(201,1),2000:2200,'k','Linewidth',2)
+% end
 ylim([0 2000])
-% clim([0 7E-5])
-clim([0 0.3])
+clim([0 7E-5])
 datetick('x','yyyy');
 xlim([datenum(2015,01,01) datenum(2022,04,01)])
 cmocean('algae')
@@ -117,7 +132,7 @@ ax2 = gca;
 set(ax2, 'TickDir', 'out')
 ax2.FontSize = 12;
 linkaxes([ax1 ax2],'x')
-
+toc
 % clear wggmerge_fl
 %% Remin0 versus previous year maximum ML depth
 colorblind = [0 0.61961 0.45098; 0 0.44706 0.69804; 0.33725 0.70588 0.91373; 0.94118 0.89412 0.25882;...
