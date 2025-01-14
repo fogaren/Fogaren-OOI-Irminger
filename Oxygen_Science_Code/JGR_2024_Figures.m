@@ -106,7 +106,8 @@ hold on; axis ij; box on
 plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'ok','MarkerSize',2,'MarkerFaceColor','k')
 ylim([0 2000])
 % clim([0 7E-5])
-clim([0 0.3])
+% clim([0 0.3])
+clim([0 1])
 datetick('x','yyyy');
 xlim([datenum(2015,01,01) datenum(2022,04,01)])
 cmocean('algae')
@@ -319,29 +320,29 @@ ax.FontSize = 12;
 
 
 
-%% Mixed Layer Dissolved Oxygen 
-% Nothing added by adding gliders
-% Look into flanking moorings 
-cd('G:\Shared drives\NSF_Irminger\OOI_DO_fixed_depth\Data\mixed_layer')
-load mixed_layer_calibrated_oxygen.mat
-figure
-set(gcf,'position',[100,100,800,150])
-xlim([datenum(2015,01,01) datenum(2022,04,01)])
-f = gca;
-for j = 1:length(t)
-    plot([t(j) t(j)],[250 400],'Color',grey,'LineStyle',':','Linewidth',1.5)
-    hold on
-end
-xlim([datenum(2015,01,01) datenum(2022,04,01)])
-ML_DO.O2sol_umolkg(36955) = NaN;
-plot(ML_DO.DOdn,ML_DO.O2sol_umolkg,'k')
-plot(ML_DO.DOdn,ML_DO.DO_umolkg_final,'.','Color',blue)
-ylabel({'DO' '(\mumol kg^-^1)'},'Fontsize',12)
-f.FontSize = 12;
-
-ylim([250 400])
-datetick('x','yyyy','Keepticks')
-xlim([datenum(2015,01,01) datenum(2022,04,01)])
+% %% Mixed Layer Dissolved Oxygen 
+% % Nothing added by adding gliders
+% % Look into flanking moorings 
+% cd('G:\Shared drives\NSF_Irminger\OOI_DO_fixed_depth\Data\mixed_layer')
+% load mixed_layer_calibrated_oxygen.mat
+% figure
+% set(gcf,'position',[100,100,800,150])
+% xlim([datenum(2015,01,01) datenum(2022,04,01)])
+% f = gca;
+% for j = 1:length(t)
+%     plot([t(j) t(j)],[250 400],'Color',grey,'LineStyle',':','Linewidth',1.5)
+%     hold on
+% end
+% xlim([datenum(2015,01,01) datenum(2022,04,01)])
+% ML_DO.O2sol_umolkg(36955) = NaN;
+% plot(ML_DO.DOdn,ML_DO.O2sol_umolkg,'k')
+% plot(ML_DO.DOdn,ML_DO.DO_umolkg_final,'.','Color',blue)
+% ylabel({'DO' '(\mumol kg^-^1)'},'Fontsize',12)
+% f.FontSize = 12;
+% 
+% ylim([250 400])
+% datetick('x','yyyy','Keepticks')
+% xlim([datenum(2015,01,01) datenum(2022,04,01)])
 %% 
 
 

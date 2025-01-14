@@ -1,4 +1,5 @@
 % Loads Hilary's calibrated oxygen products for gliders and WFP 
+tic
 clearvars; close all
 
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_March2024')
@@ -52,6 +53,7 @@ cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Export_bias_from_Deep_isotherm_correction.m')
 %% Create Figures 
 % cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-% run('JGR_2024_Figures.m') % Clean this up. 
+run('JGR_2024_Figures.m') % Clean this up. 
 % run('JGR_Schematic.m') % Combine this into Figures and delete 
 
+toc

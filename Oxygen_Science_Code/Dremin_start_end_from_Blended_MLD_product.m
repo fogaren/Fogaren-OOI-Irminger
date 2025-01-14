@@ -22,6 +22,7 @@ day_mld0(isnan(day_mld0)) = [];
 day_mld = interp1(day_dn0,day_mld0,datenum(blended_mld_daily_all.time),'linear');
 day_mld = round(day_mld); % Because oxygen product is gridded by meter
 day_dn = datenum(blended_mld_daily_all.time); 
+blended_mld_daily_all.dn = day_dn; 
 
 mld_max = islocalmax(day_mld,'MinSeparation',days(270),'SamplePoints',blended_mld_daily_all.time);
 mld_max = find(mld_max); 
