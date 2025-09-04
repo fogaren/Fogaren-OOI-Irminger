@@ -2,6 +2,8 @@
 % Make copies of data with prho outliers already removed 
 combo.prho_outs_removed = combo.prho_prho_out_removed; % copy density data with prho outliers removed 
 combo.doxy_outs_removed = combo.doxy_prho_out_removed; % copy oxygen data with prho outliers removed 
+combo.sal_outs_removed = combo.sal_prho_out_removed;
+combo.temp_outs_removed = combo.temp_prho_out_removed;
 for yr = 1:7
     for z =  1:2000
 
@@ -17,6 +19,8 @@ for yr = 1:7
             % Overwrite DO outliers with NaN in prho and DO data 
             combo.prho_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
             combo.doxy_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
+            combo.sal_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
+            combo.temp_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
         end
     end
 end

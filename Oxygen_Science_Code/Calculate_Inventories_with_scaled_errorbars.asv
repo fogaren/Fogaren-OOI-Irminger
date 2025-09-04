@@ -154,16 +154,14 @@ Cinventory_less200m_molm2 = DOinventory_less200m_molm2*-0.69;
 Cinventory_Yr3_projected = export_Cinventory_molm2(3)*(1+nanmean(Cinventory_less200m_molm2./export_Cinventory_molm2));
 
 %% Calculate average for study from each remin year of data 
-annual_export = [export_Cinventory_molm2(1:2) Cinventory_Yr3_projected export_Cinventory_molm2(4:7)];
+
 % Create arrays from nested structure indexed by year 
 % For taking means/stds 
 for j = 1:7
     Dremin_length_all(:,j) = Dremin_length_days{j};
-    DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j};
-    DOresp_rate_mmolm3_day_all(:,j) = DOresp_rate_mmolm3_day{j};
+    DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
     DOresp_season_molm3_all(:,j) = DOresp_season_molm3{j};
     regress_prho_all(:,j) = regress_prho{j}; 
-    regress_temp_all(:,j) = regress_temp{j};
 end
 
 % Overwrite data beyond Remin0 with Nan for each year 
@@ -180,14 +178,7 @@ Dremin_length_mean = mean(Dremin_length_all,2,'omitnan');
 Dremin_length_std = std(Dremin_length_all,0,2,'omitnan');
 DOresp_rate_umolkg_day_mean = nanmean(DOresp_rate_umolkg_day_all(50:2000,:),2);
 DOresp_rate_umolkg_day_std = nanstd(DOresp_rate_umolkg_day_all(50:2000,:),0,2);
-DOresp_rate_mmolm3_day_mean = nanmean(DOresp_rate_mmolm3_day_all(50:2000,:),2);
-DOresp_rate_mmolm3_day_std = nanstd(DOresp_rate_mmolm3_day_all(50:2000,:),0,2);
 regress_prho_mean = mean(regress_prho_all(50:2000,:),2,'omitnan');
-regress_temp_mean = mean(regress_temp_all(50:2000,:),2,'omitnan');
-
-% Rates in units of carbon
-Cresp_rate_umolkg_day_mean = DOresp_rate_umolkg_day_mean*-0.69; 
-Cresp_rate_umolkg_day_std = DOresp_rate_umolkg_day_std*-0.69; 
 
 % Export for season calculated from mean DO resp rate(z) and mean Dremin, 
 % not calculated from the mean of all the seasons 
@@ -195,13 +186,6 @@ DOresp_season_umolkg_mean = DOresp_rate_umolkg_day_mean.*Dremin_length_mean(50:2
 DOresp_season_molm3_mean = (DOresp_season_umolkg_mean.*regress_prho_mean)/(1000*1000);
 
 C_total_remin_mean(50:1149) = cumsum(DOresp_season_molm3_mean(50:1149)*-0.69,'reverse');
-
-% Calculate export from the mean DO resp rate and extrapolate to a calendar
-% year; for comparisons to other studies 
-DOresp_calyr_umolkg_mean = DOresp_rate_umolkg_day_mean.*365.25; 
-DOresp_calyr_molm3_mean = (DOresp_calyr_umolkg_mean.*regress_prho_mean)/(1000*1000);
-
-C_total_remin_calyr_mean(50:1149) = cumsum(DOresp_calyr_molm3_mean(50:1149)*-0.69,'reverse');
 
 for j = 1:7
     DOresp_season_molm3_all(Remin0(j):end,j) = NaN;
@@ -239,17 +223,6 @@ for j = 1:7
     axis ij
     plot(regress_prho_mean,50:2000,'k','Linewidth',2)
     xlabel('Density (kg m^-^3)')
-end
-
-figure
-for j = 1:7
-    plot(regress_temp{j},1:2000)
-    hold on
-    grid on
-    axis ij
-    plot(regress_temp_mean,50:2000,'k','Linewidth',2)
-    plot(nanmedian(regress_temp_all(20:2000,:),2),20:2000,'k--','Linewidth',2)
-    xlabel('temp (\circ C)')
 end
 
 %%

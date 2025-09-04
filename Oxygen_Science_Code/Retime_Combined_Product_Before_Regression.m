@@ -15,6 +15,7 @@ for j = 1:length(newtime)-1
 
     DOmean(:,j) = mean(combo.doxy_outs_removed(:,ind),2,'omitnan');
     prhomean(:,j) = mean(combo.prho_outs_removed(:,ind),2,'omitnan');
+    tempmean(:,j) = mean(combo.temp(:,ind),2,'omitnan');
     DOallmean(:,j) = mean(combo.doxy(:,ind),2,'omitnan');
 end
 
@@ -22,6 +23,7 @@ time = (newtime(1)+ 12/24):(newtime(end-1)+12/24);
 daily.time = time';
 daily.doxy = DOmean;
 daily.prho = prhomean;
+daily.temp = tempmean;
 daily.doxy_w_outliers = DOallmean;
 
 clear time newtime DOallmean DOmean prhomean indstart indend ind j 

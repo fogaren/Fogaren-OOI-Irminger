@@ -10,7 +10,7 @@ addpath(genpath('G:\My Drive\Matlab_work\Github\cmocean'))
 % Read in calibrated bottle files, Winkler sample values and oxygen files
 % processed with default hysteresis correction and user-determined time lag
 % correction 
-btl_dir = 'C:\Users\fogaren\Desktop\Bottle_Files\CE17007';
+btl_dir = 'C:\Users\fogaren\Desktop\CE17007\SBE-profile-data\SBE-profile-data';
 cal_dir = 'C:\Users\fogaren\Desktop\CE17007\SBE-profile-data\from_leah';
 samp_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Calibration_Comparison\Bottle_Sample_Data'; % Winkler file location 
 Winkler_file = 'CE17007_Bottle_Data_with_Metadata.xlsx'; % Winkler file name 
@@ -38,8 +38,8 @@ btlfiles = ls('*.cbot_s'); % List of Leah's calibrated bottle files
 btlcasts = str2num(btlfiles(:,9:11)); % Pulls out cast numbers that have bottle files 
 
 cd(btl_dir)
-mybtlfiles = ls('*.csv'); % List of my processed bottle files 
-mybtlcasts = str2num(mybtlfiles(:,9:11)); % Pulls out cast numbers that have bottle files 
+mybtlfiles = ls('*.btl'); % List of my processed bottle files 
+mybtlcasts = str2num(mybtlfiles(:,9:11)); % Pulls out cast numbers that have bottle files
 
 % Make sure that there is a Leah bottle file for each of my bottle files 
 if mybtlcasts == btlcasts 
@@ -50,6 +50,19 @@ if mybtlcasts == btlcasts
 else
     disp('Caution: Issue with Btl Cast Numbers!')
 end
+%%
+
+btlsum = [];
+for j = 1:length(cast_num)
+    btlsum{cast_num(j)} = readSBSbtl(fn(j,:));
+    btlsum{cast_num(j)}.Cast(:) = cast_num(j);
+end
+par23_btlsum = btlsum; 
+
+par23_btlsum_tbl = [];
+for j = 1:length(cast_num)
+    par23_btlsum_tbl = [par23_btlsum_tbl; btlsum{cast_num(j)}]; 
+end 
 %%
 
 CTD_sen = 1; 

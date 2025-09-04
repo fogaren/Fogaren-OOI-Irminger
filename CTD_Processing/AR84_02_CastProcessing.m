@@ -5,14 +5,10 @@ addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
 addpath(genpath('G:\My Drive\Matlab_work\Github\GSW-Matlab'))
 addpath(genpath('G:\My Drive\Matlab_work\Github\cmocean'))
 
-% dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\Year9';
-% cd(dir)
-% load AR69_01_DOcal.mat
-
 dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\downcasts';
 uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\upcasts';
 leah_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\final_salinity_cal_2db';
-% bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\AR69-01';
+% bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\AR84-02';
 savefile = 0; % savefile == 1 for saving; savefile == 0, don't save 
 %% Read in my processed casts 
 
@@ -24,7 +20,7 @@ cast_num = str2num(files(:,10:12)); % Pulls out cast numbers
 mydowncast = []; % Read all my processed SBE cast into matlab 
 for j = 1:length(cast_num)
     dcnv_in = readSBScnv(files(j,:));
-    mydowncast{cast_num(j)} = my_cast(dcnv_in); %change so that i references cast number not file length number 
+    mydowncast{cast_num(j)} = my_cast(dcnv_in); %change so that j references cast number not file length number 
 end
 
 % Upcasts 

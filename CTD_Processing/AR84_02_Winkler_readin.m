@@ -54,6 +54,14 @@ btlsum_tbl = [];
 for j = 1:length(btlsum)
     btlsum_tbl = [btlsum_tbl; btlsum{j}];
 end
+
+%%
+figure
+plot(btlsum_tbl.temp1,btlsum_tbl.draw_temp1 - btlsum_tbl.temp1,'o')
+hold on
+plot(btlsum_tbl.temp2,btlsum_tbl.draw_temp2 - btlsum_tbl.temp2,'o')
+grid on
+
 %% If processing just one 
 % if CTD_sen == 1
 % 
@@ -73,31 +81,33 @@ end
 %     btlsum_tbl.oxy_volts = btlsum_tbl.oxy_volts1;
 % end
 % 
-% if CTD_sen == 2
-% 
-%     % From SBE factory calibration 
-%     % Serial number 0449, Calibration Date 06-Mar-24
-%     cal.SOC = 3.81570e-001;
-%     cal.VOFFSET = -7.17000e-001;
-%     cal.A = -3.49850e-003;
-%     cal.B = 1.49470e-004; 
-%     cal.C = -2.69920e-006;
-%     cal.E = 3.60000e-002;
-%     cal.Tau20 = 1.12000e+000;
-%     cal.INSTRUMENT_TYPE = 'SBE43';
-%     cal.SERIALNO = '0449';
-%     cal.OCALDATE = '06-Mar-24';
-% 
-%     btlsum_tbl.oxy_volts = btlsum_tbl.oxy_volts2;
-% end
+CTD_sen = 2;
+if CTD_sen == 2
+
+    % From SBE factory calibration 
+    % Serial number 0449, Calibration Date 06-Mar-24
+    cal.SOC = 3.81570e-001;
+    cal.VOFFSET = -7.17000e-001;
+    cal.A = -3.49850e-003;
+    cal.B = 1.49470e-004; 
+    cal.C = -2.69920e-006;
+    cal.E = 3.60000e-002;
+    cal.Tau20 = 1.12000e+000;
+    cal.INSTRUMENT_TYPE = 'SBE43';
+    cal.SERIALNO = '0449';
+    cal.OCALDATE = '06-Mar-24';
+
+    btlsum_tbl.oxy_volts = btlsum_tbl.oxy_volts2;
+end
 
 % non linear multiple regression for just one. 
 % Oxygen solubility calculated using GSW Toolbox 
 % Model variables 
 % X = [btlsum_tbl.oxy_volts,btlsum_tbl.O2sol_umolkg,btlsum_tbl.t,btlsum_tbl.prs];
 % 
-% btlsum_tbl.Winkler1_umolkg(btlsum_tbl.t < 2) = NaN;
-% btlsum_tbl.Winkler2_umolkg(btlsum_tbl.t < 2) = NaN;
+
+btlsum_tbl.Winkler1_umolkg(btlsum_tbl.t < 2) = NaN;
+btlsum_tbl.Winkler2_umolkg(btlsum_tbl.t < 2) = NaN;
 % Treats Winklers as individual points 
 X = [[btlsum_tbl.oxy_volts; btlsum_tbl.oxy_volts],...
     [btlsum_tbl.O2sol_umolkg; btlsum_tbl.O2sol_umolkg],...
@@ -571,6 +581,145 @@ xlabel('Percent Saturation')
 grid on
 
 mdlcal_k2 = mdlcal_k; % because two sets of sensors 
+
+%% Sensor 2, Group 1: Stations 1-13 SOC cn, E from Winklers greater than 1000 (cal_deep.Ecalc)
+cal = cal2; 
+group1 = [1:36]; 
+good = group1; 
+btlsum_tbl = [];
+for j = 1:length(good)
+    btlsum_tbl = [btlsum_tbl; btlsum{good(j)}];
+end
+
+X2 = [[btlsum_tbl.oxy_volts2; btlsum_tbl.oxy_volts2],...
+    [btlsum_tbl.O2sol_umolkg2; btlsum_tbl.O2sol_umolkg2],...
+    [btlsum_tbl.t2; btlsum_tbl.t2],...
+    [btlsum_tbl.prs; btlsum_tbl.prs]];
+bad_casts2 = [btlsum_tbl.Cast; btlsum_tbl.Cast];
+btl_check2 = [btlsum_tbl.Bottle; btlsum_tbl.Bottle];
+Winklers_to_use2 = [btlsum_tbl.Winkler1_umolkg2; btlsum_tbl.Winkler2_umolkg2];
+pdens2 = [btlsum_tbl.prho2; btlsum_tbl.prho2];
+
+% Calculate drift with variable SOC with time 
+cn = btlsum_tbl.Cast - min(btlsum_tbl.Cast); 
+
+X_cn = [X2, cn]; 
+    
+bad_casts = btlsum_tbl.Cast;
+btl_check = btlsum_tbl.Bottle; 
+pdens = btlsum_tbl.prho;
+Winklers_to_use = btlsum_tbl.Winkler_umolkg;
+
+% SBE functional form with SOC as a function of station 
+cal2.Ecalc_cn = cal_all.Ecalc;
+modelfun_cn = @(b,x)((b(2)*x(:,5) + b(1)).*(x(:,1) + cal2.VOFFSET)).*x(:,2)...
+    .*(1 + cal2.A*x(:,3) + cal2.B*x(:,3).^2 + cal2.C*x(:,3).^3)...
+    .*exp((cal2.Ecalc_cn*x(:,4))./(x(:,3) + 273.15));
+
+beta0_cn = [cal2.SOC 0]; % Starting values for coefficient iterations 
+
+mdl_cn1 = fitnlm(X_cn,Winklers_to_use,modelfun_cn,beta0_cn);
+
+% figure
+% histfit(mdl_cn1.Residuals.Raw)
+% title('SOC_c_n Residuals with Outliers, it = 1')
+% ylabel('Frequency')
+% xlabel('DO Residuals, Winklers - NLMR_c_n output (\mumol/kg)')
+
+% Find outliers based on median filter it = 2 
+Winkler_outliers1_cn = find(isoutlier(mdl_cn1.Residuals.Raw,'median') == 1);
+mdl_cn2 = fitnlm(X_cn,Winklers_to_use,modelfun_cn,beta0_cn,'Exclude',Winkler_outliers1_cn);
+
+% figure
+% histfit(mdl_cn2.Residuals.Raw)
+% title('SOC_c_n Residuals with Outliers Removed, it = 2')
+% ylabel('Frequency')
+% xlabel('DO Residuals, Winklers - NLMR_c_n output (\mumol/kg)')
+
+% Find outliers based on median filter it = 3 
+ind = find(isoutlier(mdl_cn2.Residuals.raw,'median') == 1);
+Winkler_outliers2_cn = [ind; Winkler_outliers1_cn];
+% Exclude outliers from NLMR model 
+mdl_cn3 = fitnlm(X_cn,Winklers_to_use,modelfun_cn,beta0_cn,'Exclude',Winkler_outliers2_cn);
+
+% figure
+% histfit(mdl_cn3.Residuals.Raw)
+% title('SOC_c_n Residuals with Outliers Removed, it = 3')
+% ylabel('Frequency')
+% xlabel('DO Residuals, Winklers - NLMR_c_n output (\mumol/kg)')
+
+% Find outliers based on median filter it = 4 
+ind = find(isoutlier(mdl_cn3.Residuals.raw,'median') == 1);
+Winkler_outliers3_cn = [ind; Winkler_outliers2_cn];
+% Exclude outliers from NLMR model 
+mdl_cn4 = fitnlm(X_cn,Winklers_to_use,modelfun_cn,beta0_cn,'Exclude',Winkler_outliers3_cn);
+
+% figure
+% histfit(mdl_cn4.Residuals.Raw)
+% title('SOC_c_n Residuals with Outliers Removed, it = 4')
+% ylabel('Frequency')
+% xlabel('DO Residuals, Winklers - NLMR_c_n output (\mumol/kg)')
+
+% Find outliers based on median filter it = 5 
+ind = find(isoutlier(mdl_cn4.Residuals.raw,'median') == 1);
+Winkler_outliers4_cn = [ind; Winkler_outliers3_cn];
+% Exclude outliers from NLMR model 
+mdl_cn5 = fitnlm(X_cn,Winklers_to_use,modelfun_cn,beta0_cn,'Exclude',Winkler_outliers4_cn)
+
+figure
+histfit(mdl_cn5.Residuals.Raw)
+title('SOC_c_n Residuals with Outliers Removed, it = 5')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR_c_n output (\mumol/kg)')
+
+%%
+mdlcal_cn = mdl_cn5;
+% cal for SOC_dt 
+cal.SOCcalc_cn = mdlcal_cn.Coefficients.Estimate(1);
+cal.SOCrate_cn = mdlcal_cn.Coefficients.Estimate(2);
+cal.gain = cal.SOCcalc_cn/cal.SOC;
+cal.Winkler_outliers_cn = Winkler_outliers4_cn(Winkler_outliers4_cn < height(btlsum_tbl));
+cal.casts = good;
+cal.mdl = mdlcal_cn;
+cal.out_NLMR_cn = sortrows([bad_casts(Winkler_outliers4_cn) btl_check(Winkler_outliers4_cn) Winklers_to_use(Winkler_outliers4_cn)],[1 2]);
+cal1 = cal;
+
+% % For range of SOC
+cal1.SOCcalc_cn % SOC at start 
+cal1.SOCcalc_cn/cal1.SOC % gain at start 
+(btlsum_tbl.Cast(end) - btlsum_tbl.Cast(1))*cal1.SOCrate_cn + cal1.SOCcalc_cn
+(btlsum_tbl.Cast(end) - btlsum_tbl.Cast(1))*cal1.SOCrate_cn + cal1.SOCcalc_cn/cal1.SOC
+
+f = figure(8);
+f.Position = [100 100 840 500];
+%Plot residuals versus pressure 
+subplot(2,2,1)
+plot(btlsum_tbl.prs, mdlcal_cn.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Pressure (db)')
+grid on
+
+%Plot residuals versus cast number/time 
+subplot(2,2,2)
+plot(btlsum_tbl.Cast, mdlcal_cn.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Station Number')
+grid on
+
+%Plot residuals versus temperature 
+subplot(2,2,3)
+plot(btlsum_tbl.t, mdlcal_cn.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Temperature (\circC)')
+grid on
+
+%Plot residuals versus oxygen concentration 
+subplot(2,2,4)
+plot(btlsum_tbl.Winkler_umolkg, mdlcal_cn.Residuals.raw(1:height(btlsum_tbl)), '.k','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Winkler DO (\mumol/kg)')
+grid on
+sgtitle('CE17-007: SOC_c_n Winklers from Group 1')
 %% Decided on SOC calibration 
 SOC_type = 1;
 SOC_type = 1; 
@@ -759,7 +908,7 @@ function btlsum = combine_btl_files2(Wink_btl_file,leah_btl_file,my_btl_file)
     btlsum.Winkler2_umolkg2 = btlsum.Winkler2_mLL*1000*44.661./btlsum.prho2; % uses potential density
     
     % Reorder variables and remove unnecessary ones
-    btlvars = {'Cruise','Date','Cast','Bottle','prs','depth','lat','lon','temp1','temp2','sal1','sal2','oxy_volts1','oxy_volts2',...
+    btlvars = {'Cruise','Date','Cast','Bottle','prs','depth','lat','lon','temp1','temp2','draw_temp1','draw_temp2','sal1','sal2','oxy_volts1','oxy_volts2',...
         'Discrete_Salinity_psu','CTDcal','t1','CT1','pt1','SP1','SA1','rho1','prho1','sigma01',...
         't2','CT2','pt2','SP2','SA2','rho2','prho2','sigma02','Winkler1_mLL','Winkler2_mLL'...
         'Winkler1_umolkg1','Winkler2_umolkg1','Winkler1_umolkg2','Winkler2_umolkg2','O2sol_umolkg1','O2sol_umolkg2'};

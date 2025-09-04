@@ -1,5 +1,4 @@
 % Loads Hilary's calibrated oxygen products for gliders and WFP 
-tic
 clearvars; close all
 
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_March2024')
@@ -47,13 +46,23 @@ run('DO_Regression_Dremin_Combined_Assets.m')
 % sequestered values when I finalize those values 
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Calculate_Inventories_with_scaled_errorbars.m')
+%% Identify large partcle signal and calculate sinking rates 
+% Builds off of Jose's work and runs streamlined version of
+% LargeParticle_Calculations.m
+cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
+run('LargeParticle_Calcs_Streamlined.m')
+%% Calculate power and exp fit to attenuated Cremin and Bbl signal
+cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
+run('Attenuation_Calculations.m')
+%% Rough calculation of exported carbon
+cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
+edit('Particulate_Carbon_Flux_Calculation.m')
 %% Discussion Points and other
 % This code chokes 
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Export_bias_from_Deep_isotherm_correction.m')
 %% Create Figures 
-% cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-run('JGR_2024_Figures.m') % Clean this up. 
+cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
+% run('JGR_2024_Figures.m') % Clean this up. 
 % run('JGR_Schematic.m') % Combine this into Figures and delete 
 
-toc

@@ -1,53 +1,53 @@
-figure
-for j = 1:7
-    subplot(1,2,1)
-    Dremin_length_all(:,j) = Dremin_length_days{j};
-    DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
-    plot(Dremin_length_days{j},1:2000,'Linewidth',1.5)
-    hold on
-    axis ij
-    grid on
-    plot(nanmean(Dremin_length_all,2),1:2000,'k--','Linewidth',2)
-    xlabel('Remin Period (d)')
-     ylim([0 1500])
-end
-
-for j = 1:7
-    subplot(1,2,2)
-    DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
-    plot(DOresp_rate_umolkg_day{j}(50:2000),50:2000,'Linewidth',1.5)
-    hold on
-    plot(nanmean(DOresp_rate_umolkg_day_all(50:2000,:),2),50:2000,'k--','Linewidth',2)
-    axis ij
-    xlim([-0.3 0]); ylim([0 1500])
-    grid on
-    xlabel('Resp Rate (\mumol DO kg^-^1 d^-^1)')
-end
-sgtitle('Yearly Resp. Rates and Remin. Periods with Means')
-for j = 1:7
-    regress_prho_all(:,j) = regress_prho{j}; 
-%     plot(regress_prho{j},1:2000)
+% figure
+% for j = 1:7
+%     subplot(1,2,1)
+%     Dremin_length_all(:,j) = Dremin_length_days{j};
+%     DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
+%     plot(Dremin_length_days{j},1:2000,'Linewidth',1.5)
 %     hold on
-%     grid on
 %     axis ij
-%     plot(nanmean(regress_prho_all,2),1:2000,'k','Linewidth',2)
-%     xlabel('Density (kg m^-^3)')
-end
-
-for j = 1:7
-    DOresp_season_molm3_all(:,j) = DOresp_season_molm3{j};
-end
-DOresp_season_molm3_all(1:208,3) = NaN; % Overwrite bad data year 3
-for j = 1:7
-    DOresp_season_molm3_all(Remin0(j):end,j) = NaN;
-end
-
-Dremin_length_mean = mean(Dremin_length_all,2,'omitnan');
-Dremin_length_std = std(Dremin_length_all,0,2,'omitnan');
-DOresp_rate_umolkg_day_mean = mean(DOresp_rate_umolkg_day_all,2,'omitnan');
-DOresp_rate_umolkg_day_std = std(DOresp_rate_umolkg_day_all,0,2,'omitnan');
-DOresp_season_molm3_mean = mean(DOresp_season_molm3_all,2,'omitnan');
-DOresp_season_molm3_std = std(DOresp_season_molm3_all,0,2,'omitnan');
+%     grid on
+%     plot(nanmean(Dremin_length_all,2),1:2000,'k--','Linewidth',2)
+%     xlabel('Remin Period (d)')
+%      ylim([0 1500])
+% end
+% 
+% for j = 1:7
+%     subplot(1,2,2)
+%     DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
+%     plot(DOresp_rate_umolkg_day{j}(50:2000),50:2000,'Linewidth',1.5)
+%     hold on
+%     plot(nanmean(DOresp_rate_umolkg_day_all(50:2000,:),2),50:2000,'k--','Linewidth',2)
+%     axis ij
+%     xlim([-0.3 0]); ylim([0 1500])
+%     grid on
+%     xlabel('Resp Rate (\mumol DO kg^-^1 d^-^1)')
+% end
+% sgtitle('Yearly Resp. Rates and Remin. Periods with Means')
+% for j = 1:7
+%     regress_prho_all(:,j) = regress_prho{j}; 
+% %     plot(regress_prho{j},1:2000)
+% %     hold on
+% %     grid on
+% %     axis ij
+% %     plot(nanmean(regress_prho_all,2),1:2000,'k','Linewidth',2)
+% %     xlabel('Density (kg m^-^3)')
+% end
+% 
+% for j = 1:7
+%     DOresp_season_molm3_all(:,j) = DOresp_season_molm3{j};
+% end
+% DOresp_season_molm3_all(1:208,3) = NaN; % Overwrite bad data year 3
+% for j = 1:7
+%     DOresp_season_molm3_all(Remin0(j):end,j) = NaN;
+% end
+% 
+% Dremin_length_mean = mean(Dremin_length_all,2,'omitnan');
+% Dremin_length_std = std(Dremin_length_all,0,2,'omitnan');
+% DOresp_rate_umolkg_day_mean = mean(DOresp_rate_umolkg_day_all,2,'omitnan');
+% DOresp_rate_umolkg_day_std = std(DOresp_rate_umolkg_day_all,0,2,'omitnan');
+% DOresp_season_molm3_mean = mean(DOresp_season_molm3_all,2,'omitnan');
+% DOresp_season_molm3_std = std(DOresp_season_molm3_all,0,2,'omitnan');
 
 
 
@@ -82,7 +82,6 @@ title('Adjusted Daily Respiration Rates')
 % ylabel('Pressure (dbar)')
 % xlabel('Total Respiration (\mumol DO kg^-^1 per season)')
 % title('Total Adjusted Respiration during Remineralization Period')
-
 
 for j = 1:4 %3.4
     % Average density(z) and Dremin(z) from all Stratified seasons 

@@ -1505,8 +1505,8 @@ cn = unique(btlsum_tbl.Cast);
 KF = [];
 for j = 1:length(cn)
     castgrab = btlsum_tbl(btlsum_tbl.Cast == cn(j),3:end);
-    castgrab.RMSE(:) = rmse(castgrab.DOcorr_umolkg(castgrab.NLMR_Outlier == 2),castgrab.Winkler_umolkg(castgrab.NLMR_Outlier == 2));
-    KF(j,:) = table2array(castgrab(1,:));
+    castgrab.RMSE = rmse(castgrab.DOcorr_umolkg(castgrab.NLMR_Outlier == 2),castgrab.Winkler_umolkg(castgrab.NLMR_Outlier == 2))
+    KF(j,:) = castgrab(1,:);
 end
 %%
 KFtable = table;

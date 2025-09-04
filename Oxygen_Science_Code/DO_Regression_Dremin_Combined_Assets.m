@@ -3,6 +3,10 @@
 DOresp_rate_umolkg_day = [];
 DOresp_rate_umolkg_day_95CI_high = [];
 DOresp_rate_umolkg_day_95CI_low = []; 
+
+DOresp_rate_mmolm3_day = [];
+DOresp_rate_mmolm3_day_95CI_high = [];
+DOresp_rate_mmolm3_day_95CI_low = [];
 b_umolkg = [];
 p_value = [];
 R2 = [];
@@ -12,6 +16,7 @@ DOresp_season_umolkg = []; % rate (slope) *resp_days
 DOresp_season_umolkg_95CI_high = []; % rate (slope) *resp_days 
 DOresp_season_umolkg_95CI_low = []; % rate (slope) *resp_days 
 regress_prho = [];
+regress_temp = []; 
 DOresp_season_molm3 = []; 
 DOresp_season_molm3_95CI_high = [];
 DOresp_season_molm3_95CI_low = [];
@@ -36,6 +41,7 @@ for j = 1:7
                 CI = mdl.coefCI;
         
                 regress_prho{j}(z) = mean(daily.prho(z,resp_ind),'omitnan');
+                regress_temp{j}(z) = mean(daily.temp(z,resp_ind),'omitnan');
                         
                 else 
                     resp_start_z = NaN;
@@ -70,6 +76,7 @@ for j = 1:7
                 CI = mdl.coefCI;
         
                 regress_prho{j}(z) = mean(daily.prho(z,resp_ind),'omitnan');
+                regress_temp{j}(z) = mean(daily.temp(z,resp_ind),'omitnan');
                         
             else 
                 Dremin_days = 0; 
@@ -97,6 +104,10 @@ for j = 1:7
         DOresp_season_umolkg{j}(z) = mdl.Coefficients.Estimate(2)*Dremin_length_days{j}(z); % rate (slope) *resp_days
         DOresp_season_umolkg_95CI_high{j}(z) = CI(2,1)*Dremin_length_days{j}(z); % rate (slope) *resp_days
         DOresp_season_umolkg_95CI_low{j}(z) = CI(2,2)*Dremin_length_days{j}(z);% rate (slope) *resp_days
+
+        DOresp_rate_mmolm3_day{j}(z) = (mdl.Coefficients.Estimate(2).*regress_prho{j}(z))/(1000*1000); % rate (slope) *resp_days
+        DOresp_rate_mmolm3_day_95CI_high{j}(z) = (CI(2,1).*regress_prho{j}(z))/(1000*1000); % rate (slope) *resp_days
+        DOresp_rate_mmolm3_day_95CI_low{j}(z) = (CI(2,2).*regress_prho{j}(z))/(1000*1000);% rate (slope) *resp_days
 
         DOresp_season_molm3{j}(z) = (DOresp_season_umolkg{j}(z).*regress_prho{j}(z))/(1000*1000);
         DOresp_season_molm3_95CI_high{j}(z) = (DOresp_season_umolkg_95CI_high{j}(z).*regress_prho{j}(z))/(1000*1000);
