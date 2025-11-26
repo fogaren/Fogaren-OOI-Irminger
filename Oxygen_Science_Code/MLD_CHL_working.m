@@ -9,11 +9,12 @@ run('GeneralSettings.m')
 X1 = X1'; Y1 = Y1';
 ind = ~isnan(wggmerge_fl.chla);
 figure
-scatter(X1(ind),Y1(ind),[],wggmerge_fl.chla(ind),'filled')
+scatter(X1(ind),Y1(ind),6,wggmerge_fl.chla(ind),'filled')
 axis ij
 datetick
 cmocean('algae')
 colorbar
+clim([0 0.3])
 
 
 %%
@@ -191,16 +192,16 @@ for i = 1:length(deployment)
 %         MLchl_db(i) = NaN;
 %     end
 
-    figure(1)
-    plot(castblanked(:,i),wggmerge_fl.prs)
-    hold on 
-    plot(castmean,wggmerge_fl.prs,'Linewidth',1.5)
-    plot(min(castblanked(:,i)):0.01:max(castblanked(:,i)),ones(size(min(castblanked(:,i)):0.01:max(castblanked(:,i))))*MLchl_db_min(i),'k--')
-    plot(min(castblanked(:,i)):0.01:max(castblanked(:,i)),ones(size(min(castblanked(:,i)):0.01:max(castblanked(:,i))))*MLchl_db_max(i),'g--')
-    axis ij
-    title(num2str(i))
-    pause
-    clf
+    % figure(1)
+    % plot(castblanked(:,i),wggmerge_fl.prs)
+    % hold on 
+    % plot(castmean,wggmerge_fl.prs,'Linewidth',1.5)
+    % plot(min(castblanked(:,i)):0.01:max(castblanked(:,i)),ones(size(min(castblanked(:,i)):0.01:max(castblanked(:,i))))*MLchl_db_min(i),'k--')
+    % plot(min(castblanked(:,i)):0.01:max(castblanked(:,i)),ones(size(min(castblanked(:,i)):0.01:max(castblanked(:,i))))*MLchl_db_max(i),'g--')
+    % axis ij
+    % title(num2str(i))
+    % pause
+    % clf
 end
 
 [X1,Y1] = ndgrid(wggmerge_fl.time(deployment),wggmerge_fl.prs);
@@ -273,14 +274,17 @@ end
 X1 = X1'; Y1 = Y1';
 indgood = ~isnan(castblanked);
 figure
-scatter(X1(indgood),Y1(indgood),[],castblanked(indgood),'filled')
+scatter(X1(indgood),Y1(indgood),8,castblanked(indgood),'filled')
 hold on
-plot(wggmerge_fl.time,MLchl_db,'.k')
+plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'ok','MarkerSize',2,'MarkerFaceColor','k')
+
+% plot(wggmerge_fl.time,MLchl_db,'.k')
 % plot(wfp_chl.dn,wfp_chl.mld_db,'.k')
 axis ij
 datetick 
 colorbar
 cmocean('algae')
+clim([0 0.3])
 % 
 %%
 figure

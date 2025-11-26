@@ -1,5 +1,6 @@
 % Pull in all processed oxygen data and compare Years 1-9 to each other
 clearvars
+cd('G:\My Drive\Matlab_work\BC')
 run('GeneralSettings.m')
 
 cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Processed')
@@ -20,7 +21,7 @@ load AllYears_Processed_KF.mat
 % Will redo with final number before publication 
 
 % GIlatlon = [];
-addpath(genpath('G:\My Drive\Matlab_work\Github\OOI_Irminger_students\common'))
+addpath(genpath('G:\My Drive\Matlab_work\Github\OOI_Irminger_students'))
 load OOImooringLocations
 OOIradius = 10;
 

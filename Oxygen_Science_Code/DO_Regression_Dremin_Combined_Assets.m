@@ -10,6 +10,7 @@ DOresp_rate_mmolm3_day_95CI_low = [];
 b_umolkg = [];
 p_value = [];
 R2 = [];
+DFE = [];
 regress_days = []; 
 Dremin_length_days = [];
 DOresp_season_umolkg = []; % rate (slope) *resp_days 
@@ -97,6 +98,7 @@ for j = 1:7
 
         b_umolkg{j}(z) = mdl.Coefficients.Estimate(1);
         p_value{j}(z) = mdl.Coefficients.pValue(2);
+        DFE{j}(z) = mdl.DFE;
         R2{j}(z) = mdl.Rsquared.Ordinary;
         regress_days{j}(z) = max(dt_days); 
         Dremin_length_days{j}(z) = max(Dremin_days); 

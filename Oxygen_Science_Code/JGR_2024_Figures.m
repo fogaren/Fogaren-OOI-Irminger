@@ -27,6 +27,9 @@ colorblind = [0 0.61961 0.45098; 0 0.44706 0.69804; 0.33725 0.70588 0.91373; 0.9
     0.90196 0.62353 0; 0.83529 0.36863 0; 0.8 0.47451 0.6549];
 %% Figure 1: Map 
 addpath(genpath('G:\My Drive\Matlab_work\Functions\m_map1.4\m_map'))
+cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
+load OOI_BCO_DMO_latlons.mat
+SUMOlat = 59.933;    SUMOlon = -39.465;
 
 lon_min = -40.1; lon_max = -38.9;
 lat_min = 59.5; lat_max = 60.1;
@@ -69,13 +72,16 @@ m_line(glider{3}.lon,glider{3}.lat,'Linewidth',1.3,'Color',colorblind(2,:))
 m_line(glider{10}.lon,glider{10}.lat,'Linewidth',1.3,'Color',colorblind(2,:))
 m_line(glider{13}.lon,glider{13}.lat,'Linewidth',1.3,'Color',colorblind(2,:))
 
+m_plot(SUMOlon,SUMOlat,'ok','Linewidth',1.2,'MarkerSize',20,'MarkerFaceColor',colorblind(5,:))
+m_plot(Yr5wfp.lon_flord(1),Yr5wfp.lat_flord(1),'ok','Linewidth',1.2,'MarkerSize',20,'MarkerFaceColor',colorblind(6,:))
 m_plot(cast_lat_lon.Lon(ind),cast_lat_lon.Lat(ind),'ok','Linewidth',1.2,'MarkerSize',6,'MarkerFaceColor',colorblind(1,:))
-m_plot(SUMOlon,SUMOlat,'ok','Linewidth',1.2,'MarkerSize',13,'MarkerFaceColor',colorblind(5,:))
-m_plot(Yr5wfp.lon_flord(1),Yr5wfp.lat_flord(1),'ok','Linewidth',1.2,'MarkerSize',13,'MarkerFaceColor',colorblind(6,:))
+
 % title('Mean Sea Surface Height 2015-2022')
 m_grid('box','fancy','tickdir','in','FontSize',14);
 set(gca, 'fontsize', 14)
-legend([h1 h2 h3 h4 h5],'SUMO','WFP','Glider-1000m','Glider-200m','CTD-Cast','Location','SW')
+legend([h1 h2 h3 h4 h5],'SUMO','WFP','Glider-1000m','Glider-200m','CTD Cast','Location','SW')
+m_text(-40.25,60.1,'a.','FontWeight','bold','FontSize',14)
+m_text(-38.75,60.1,'b.','FontWeight','bold','FontSize',14)
 
 %% Figure 2: Oxygen timeseries with mixed layer depths 
 cd('G:\Shared drives\NSF_Irminger\OOI_DO_fixed_depth\Data\mixed_layer')
@@ -239,7 +245,7 @@ text(datenum(2014,06,01),10,'a.','FontWeight','bold','FontSize',14)
 
 yyaxis right
 ax2 = gca;
-bin_ind = find(wfpmerge.sinkingpulsedepths == 1025);
+bin_ind = find(wfpmerge.sinkingpulsedepths == 1375);
 plot(wfpmerge.profile_start,smooth(wfpmerge.binned_filteredspikes(:,bin_ind,2),0.007),'.') %mean ~20 day filter; 
 ylim([0.0000 .0001])
 ylabel('$\overline{b_{bl}}$ (m$^{{-}1}$)','interpreter','latex','Fontsize',14,'FontName','Arial','FontWeight','bold')
@@ -278,6 +284,31 @@ hcb.FontSize = 12;
 set(ax2, 'TickDir', 'out')
 linkaxes([ax1 ax2],'x')
 text(datenum(2014,06,01),0,'b.','FontWeight','bold','FontSize',14)
+%% Chl-a figure-- for supplement. Need to run after some other cells are run
+% [X2,Y2] = meshgrid(wggmerge_fl.time,wfp_prs);
+% 
+% figure
+% 
+% scatter(X2(~isnan(wggmerge_fl.chla)),Y2(~isnan(wggmerge_fl.chla)),6,wggmerge_fl.chla(~isnan(wggmerge_fl.chla)),'filled')
+% % scatter(wggmerge_fl.time,wggmerge_fl.pressure,6,wggmerge_fl.chla,'filled')
+% hold on; axis ij; box on
+% % plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'.k','MarkerSize',8)
+% % plot(blended_mld_daily_all.dn,movmean(blended_mld_daily_all.mld,5),'Color',rgb('dark gray'),'Linewidth',1.9)
+% plot(blended_mld_daily_all.dn,movmean(blended_mld_daily_all.mld,5),'Color','k','Linewidth',1.9)
+% ylim([0 1500])
+% ax2 = gca;
+% ax2.FontSize = 12;
+% datetick('x','yyyy');
+% xlim([datenum(2015,01,01) datenum(2022,04,01)])
+% ylabel('pressure (dbar)', 'Fontsize', 12); 
+% hcb = colorbar; set(hcb,'location','eastoutside')
+% clim([0 .3])
+% cmocean('algae')
+% hcb.Label.String = 'chl_a (\mug L^-^1)';
+% hcb.FontSize = 12;
+% set(ax2, 'TickDir', 'out')
+% linkaxes([ax1 ax2],'x')
+% text(datenum(2014,06,01),0,'b.','FontWeight','bold','FontSize',14)
 
 %% Figure 4: Remineralization Rates and Dremin for each year
 
@@ -309,6 +340,7 @@ ax.FontSize = 12;
 ax.XAxisLocation = 'top';
 xlabel('\itR\rm (\mumol C kg^-^1 d^-^1)')
 text(-0.07,-150,'a.','FontWeight','bold','FontSize',14)
+plot(0.2,446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
 
 
 subplot(1,2,2)
@@ -331,11 +363,14 @@ plot(Dremin_length_days{yr}(Remin0(yr)),Remin0(yr),'.','Color',colorblind(yr,:),
 end
 plot(movmean(Dremin_length_mean,25),1:2000,'-.k','Linewidth',2.25)
 text(-80,-150,'b.','FontWeight','bold','FontSize',14)
+
+
 % l = legend('2015-2016','2016-2017','2017-2018','2018-2019','2019-2020','2020-2021','2021-2022','Mean','Z_r_e_m_i_n_0','Location','SW');
 % l.FontSize = 10;
 l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Mean','Z_r_e_m_i_n_0','Location','SW');
 l.FontSize = 10;
 title(l,'Remin. Year')
+
 %% Figure 5: Total Remineralized Carbon figure 
 % Option 1 
 figure
@@ -357,7 +392,7 @@ for j = 1:7
     hold on
     b.FaceColor = colorblind(j,:);
     b.EdgeColor = colorblind(j,:);
-    plot(C_total_remin_mean(50:1149),50:1149,'Color','k','Linewidth',1.6)
+    % plot(C_total_remin_mean(50:1149),50:1149,'Color','k','Linewidth',1.6)
     axis ij
     ylim([0 1500])
     xlim([0 10])
@@ -367,6 +402,7 @@ for j = 1:7
     end
     if j == 3
         plot(2.5,120,'k*','MarkerSize',7)
+        plot(C_total_remin_mean(50:200),50:200,'-','Color',colorblind(j,:),'Linewidth',1.6)
 %         plot(1,120,'k*','MarkerSize',6) % if want text to say no data
 %         text(1.8,120,'No Data')
     end
@@ -443,7 +479,7 @@ for j = 1:7
 end
 plot(C_total_remin_mean_zstarfit(z_to_use)/C_total_remin_mean_zstarfit(norm_z),z_to_use,'--k','Linewidth',2)
 % plot(C_total_remin_zstarfit{1}(MLD_winter_max(1))/C_total_remin_zstarfit{1}(norm_z),MLD_winter_max(1),'.','Color',rgb('gray'),'MarkerSize',30)
-plot([0.37 0.37],[0 2500],'--','Color',rgb('medium gray'),'Linewidth',1.2)
+plot([0.37 0.37],[0 2500],'--','Color',rgb('medium gray'),'Linewidth',2)
 for j = 1:7
     plot(C_total_remin_zstarfit{j}(z_to_use)/C_total_remin_zstarfit{j}(norm_z),z_to_use,'Linewidth',lw,'Color',colorblind(j,:));
     hold on
@@ -479,7 +515,7 @@ plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(5)}.a*exp(curve_exp_gaussfi
 plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(6)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(6)}.b*(pres_to_use))./(curve_exp_gaussfilter_omitnan{atten_pulses_good(6)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(6)}.b*(norm_z))),pres_to_use,'Color',colorblind(7,:),'Linewidth',lw)
 % plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(7)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(7)}.b*(50:2000))./(curve_exp_gaussfilter_omitnan{atten_pulses_good(7)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(7)}.b*(norm_z))),50:2000,'Color',colorblind(7,:),'Linewidth',lw)
 plot(curve_exp_gaussfilter_omitnan_mean.a*exp(curve_exp_gaussfilter_omitnan_mean.b*(50:2000))./(curve_exp_gaussfilter_omitnan_mean.a*exp(curve_exp_gaussfilter_omitnan_mean.b*(norm_z))),50:2000,'k--','Linewidth',2)
-plot([0.37 0.37],[0 2000],'--','Color',rgb('medium gray'),'Linewidth',1.2)
+plot([0.37 0.37],[0 2000],'--','Color',rgb('medium gray'),'Linewidth',2)
 % hold on
 % plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(1)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(1)}.b*(50:2000))./(curve_exp_gaussfilter_omitnan{atten_pulses_good(1)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(1)}.b*(norm_z))),50:2000,'Color',colorblind(1,:),'Linewidth',lw)
 % plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(2)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(2)}.b*(50:2000))./(curve_exp_gaussfilter_omitnan{atten_pulses_good(2)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(2)}.b*(norm_z))),50:2000,'--','Color',colorblind(2,:),'Linewidth',lw)
@@ -637,6 +673,8 @@ for yr = 1:7
     hold on
 end
 plot(day_mld(mld_max_ind(7)),Remin0(7),'kx','MarkerSize',8,'Linewidth',1.5)
+    plot(day_mld(mld_max_ind(7)),446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
+    plot(day_mld(mld_max_ind(7)),446,'kx','MarkerSize',8,'Linewidth',1.5)
 l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','SE');
 l.FontSize = 10;
 title(l,'Remin. Year')
@@ -648,33 +686,102 @@ ylabel('Z_r_e_m_i_n_0 (dbar)')
 xlabel('Max MLD of previous winter (dbar)')
 
 %% export versus previous year maximum ML depth
+
+fit_export_maxMLD = fitlm(day_mld(mld_max_ind(1:6)),annual_export(1:6));
+
 figure
-set(gcf,'position',[100,100,450,400])
-ax = gca;
-% % er = errorbar(export_Cinventory_molm2([1:2 4:7]),zstar([1:2 4:7]),export_Cinventory_molm2([1:2 4:7])-export_Cinventory_molm2_low_scaled([1:2 4:7]),'horizontal','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
-% hold on
-% er.Color = [ 0 0 0];
-% er = errorbar(day_mld(mld_max_ind(yr)),annual_export(3),annual_export(3) - (annual_export(3)*export_Cinventory_molm2_low_scaled(3)/export_Cinventory_molm2(3)),'horizontal','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
-% % er = errorbar(day_mld(mld_max_ind(yr)), export_Cinventory_molm2([1:2 4:7]),zstar([1:2 4:7]),zstar_errorbar([1:2 4:7]),'horizontal','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
-% % for j = 1:7
-% %     plot(annual_export(j),zstar(j),'.','Color',colorblind(j,:),'MarkerSize',30)
-% %     hold on
-% % end
+set(gcf,'position',[100,100,900,400])
 
-fit_export_maxMLD = fitlm(day_mld(mld_max_ind(1:7)),annual_export);
-
-
+subplot(1,2,1)
 ax = gca;
 for yr = 1:7
     plot(day_mld(mld_max_ind(yr)),annual_export(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
     hold on
 end
-l = legend('2015-2016','2016-2017','2017-2018','2018-2019','2019-2020','2020-2021','2021-2022','Location','SE');
-l.FontSize = 10;
+
+for yr = 1:7
+    if yr ~= 3
+        plot(day_mld(mld_max_ind(yr)),annual_export(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+        hold on
+        er = errorbar(day_mld(mld_max_ind(yr)),export_Cinventory_molm2(yr),export_Cinventory_molm2(yr)-export_Cinventory_molm2_low_scaled(yr),'vertical','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
+        er.Color = [ 0 0 0];
+    else
+        plot(day_mld(mld_max_ind(yr)),annual_export(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+        hold on
+        er = errorbar(day_mld(mld_max_ind(yr)),annual_export(3),annual_export(3) - (annual_export(3)*export_Cinventory_molm2_low_scaled(3)/export_Cinventory_molm2(3)),'vertical','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
+    end
+end
+
+for yr = 1:7
+    plot(day_mld(mld_max_ind(yr)),annual_export(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+    hold on
+end
+plot(day_mld(mld_max_ind(7)),annual_export(7),'kx','MarkerSize',8,'Linewidth',1.5)
+plot([400:1600],fit_export_maxMLD.Coefficients.Estimate(2)*(400:1600) + fit_export_maxMLD.Coefficients.Estimate(1),'k--','Linewidth',1.2)
+text(1300,13.25,['R^2 = ' num2str(fit_export_maxMLD.Rsquared.Ordinary,2)])
 grid on
 ax.FontSize = 12;
 ylabel('C_e_x_p_o_r_t (mol C m^-^2 remin. yr^-^1)')
 xlabel('Max MLD of previous winter (dbar)')
+text(200,14.6,'a.','FontWeight','bold','FontSize',14)
+fit_remin0_maxMLD = fitlm(day_mld(mld_max_ind(1:6)),Remin0(1:6));
+
+subplot(1,2,2)
+ax = gca;
+for yr = 1:7
+    plot(day_mld(mld_max_ind(yr)),Remin0(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+    hold on
+end
+
+plot([400:1600],fit_remin0_maxMLD.Coefficients.Estimate(2)*(400:1600) + fit_remin0_maxMLD.Coefficients.Estimate(1),'k--','Linewidth',1.2)
+
+for yr = 1:7
+    plot(day_mld(mld_max_ind(yr)),Remin0(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+    hold on
+end
+plot(day_mld(mld_max_ind(7)),Remin0(7),'kx','MarkerSize',8,'Linewidth',1.5)
+    % plot(day_mld(mld_max_ind(7)),446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
+    % plot(day_mld(mld_max_ind(7)),446,'kx','MarkerSize',8,'Linewidth',1.5)
+l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','SE');
+l.FontSize = 10;
+title(l,'Remin. Year')
+axis([400 1600 400 1450])
+grid on
+ax.FontSize = 12;
+text(1300,1400,['R^2 = ' num2str(fit_remin0_maxMLD.Rsquared.Ordinary,2)])
+ylabel('Z_r_e_m_i_n_0 (dbar)')
+xlabel('Max MLD of previous winter (dbar)')
+text(200,1500,'b.','FontWeight','bold','FontSize',14)
+%%
+figure
+subplot(1,2,1)
+ax = gca;
+for j = 1:7
+    plot(annual_export(j),zstar(j),'.','Color',colorblind(j,:),'MarkerSize',30)
+    hold on
+end
+er = errorbar(export_Cinventory_molm2([1:2 4:7]),zstar([1:2 4:7]),export_Cinventory_molm2([1:2 4:7])-export_Cinventory_molm2_low_scaled([1:2 4:7]),'vertical','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
+hold on
+er.Color = [ 0 0 0];
+er = errorbar(annual_export(3),zstar(3),annual_export(3) - (annual_export(3)*export_Cinventory_molm2_low_scaled(3)/export_Cinventory_molm2(3)),'vertical','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
+for j = 1:7
+    plot(annual_export(j),zstar(j),'.','Color',colorblind(j,:),'MarkerSize',30)
+    hold on
+end
+plot([0:14],exportinv_zstar_fit.Coefficients.Estimate(2)*(0:14) + exportinv_zstar_fit.Coefficients.Estimate(1),'k--','Linewidth',1.2)
+xlabel('Annual export (mol C m^-^2 remin. yr^-^1)')
+ylabel('z^* for C_r_e_m_i_n (m)')
+ax.FontSize = 12;
+grid on
+ylim([100 450])
+xlim([0.5 14])
+% text(2.25,425,['R^2 = ' num2str(exportinv_zstar_fit.Rsquared.Ordinary,2)])
+l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','SE');
+l.FontSize = 10;
+title(l,'Remin. Year')
+text(1,425,['R^2 = ' num2str(exportinv_zstar_fit.Rsquared.Ordinary,2) ' (p = 0.105)'])
+text(-2.5,475,'b.','FontWeight','bold','FontSize',14)
+
 
 %% Option  
 fit_zstar_maxMLD = fitlm(day_mld(mld_max_ind(1:6)),zstar(1:6));
@@ -700,7 +807,7 @@ grid on
 ax.FontSize = 12;
 % text(450,375,['R^2 = ' num2str(fit_zstar_maxMLD.Rsquared.Ordinary,2)])
 text(450,425,'R^2 = 0.90 (p = 0.004)') % For 2 decimal places
-ylabel('z^* for C_e_x_p_o_r_t (m)')
+ylabel('z^* for C_r_e_m_i_n (m)')
 xlabel('MLD_m_a_x of previous winter (dbar)')
 text(165,475,'d.','FontWeight','bold','FontSize',14)
 
@@ -720,7 +827,7 @@ for j = 1:7
 end
 % plot([2:10],exportinv_zstar_fit.Coefficients.Estimate(2)*(2:10) + exportinv_zstar_fit.Coefficients.Estimate(1),'k--','Linewidth',1.2)
 xlabel('C_e_x_p_o_r_t (mol C m^-^2 remin. yr^-^1)')
-ylabel('z^* for C_e_x_p_o_r_t (m)')
+ylabel('z^* for C_r_e_m_i_n (m)')
 ax.FontSize = 12;
 grid on
 xlim([0 14])
@@ -756,7 +863,7 @@ end
 % text(0.022,375,'R^2 = 0.16 (p = 0.382)') 
 grid on
 xlabel('Mean \itR\rm 200-400 dbar (\mumol C kg^-^1 d^-^1)')
-ylabel('z^* for C_e_x_p_o_r_t (m)')
+ylabel('z^* for C_r_e_m_i_n (m)')
 ylim([100 450])
 xlim([0.01 0.1])
 ax.FontSize = 12;
@@ -782,7 +889,7 @@ end
 grid on
 % plot([3.95:0.01:4.2],fit_zstar_temp.Coefficients.Estimate(2)*(3.95:0.01:4.2) + fit_zstar_temp.Coefficients.Estimate(1),'k--','Linewidth',1.2)
 xlabel('Mean temp. 200-400 dbar (\circC)')
-ylabel('z^* for C_e_x_p_o_r_t (m)')
+ylabel('z^* for C_r_e_m_i_n (m)')
 ylim([100 450])
 ax.FontSize = 12;
 text(3.675,475,'a.','FontWeight','bold','FontSize',14)
@@ -1235,7 +1342,7 @@ set(ax,'XTick',[-2 x2],...
 xlim([-4.5 28.5]); grid on
 title('','Fontsize',40)
 % legend('seasonal export','re-enters mixed layer','sequestered annually','Location','southoutside','orientation','horizontal');
-l = legend('seasonally exported','seasonally re-entrained','annually sequestrated > MLD_m_a_x','Location','NW');
+l = legend('seasonally exported','seasonally re-entrained','annually sequestered > MLD_m_a_x','Location','NW');
 title(l,'Remineralized Carbon')
 ax.FontSize = 12;
 

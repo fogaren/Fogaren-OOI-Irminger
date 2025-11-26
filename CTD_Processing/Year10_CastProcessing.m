@@ -1,26 +1,262 @@
-% Fix function to remove comparison part 
+% Set up workspace 
+clearvars
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird_Oxygen_Toolbox')
 addpath('G:\My Drive\Matlab_work\Github\Sea-Bird-Toolbox')
 addpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing')
 addpath(genpath('G:\My Drive\Matlab_work\Github\GSW-Matlab'))
-addpath(genpath('G:\My Drive\Matlab_work\Github\cmocean'))
 
-dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\downcasts';
-uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\upcasts';
-leah_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\final_salinity_cal_2db';
-% bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\AR84-02';
+% Read in calibrated bottle files, Winkler sample values and oxygen files
+% processed with default hysteresis correction and user-determined time lag
+% correction 
+% btl_dir = 'C:\Users\fogaren\Desktop\AR76-03\btl'; % With hysteresis correction 
+btl_dir = 'C:\Users\fogaren\Desktop\AR76-03\ctd\raw'; % with custom hysteresis correction 
+dir = btl_dir; % Casts to match bottle files 
+dc_dir = {btl_dir '\downcasts'};
+uc_dir = 'C:\Users\fogaren\Desktop\AR76-03\ctd\raw\upcasts';
+%cal_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\Year9\From_Leah';
+samp_dir = 'C:\Users\fogaren\Desktop\AR76-03'; % Winkler file location 
+Winkler_file = 'Irminger_Sea-10_AR76-03_Discrete_Summary_KF.xlsx'; % Winkler file name 
+filesave = 0; % filesave == 1, save calibration output as mat file
+
+% Use Bottle samples to calculate new SOC (gain) and E terms for CTD data 
+CTD_sen = 1; % Use primary or secondary CTD temp and sal
+
+ns = 10; % Start of cast numbers in file name
+ne = 12; % End of cast numbers in file name 
+
+
+% leah_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\Year9\From_Leah';
+% bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\AR69-01';
 savefile = 0; % savefile == 1 for saving; savefile == 0, don't save 
+%% Create bottle summary indexed by cast number and table with all data 
+cd(btl_dir)
+mybtlfiles = ls('*.btl'); % List of my processed bottle files 
+btlcasts = str2num(mybtlfiles(:,9:11)); % Pulls out cast numbers that have bottle files 
+
+SBEbtlfiles = []; % Read in all SBE bottle files 
+for j = 1:length(btlcasts)
+    SBEbtlfiles{btlcasts(j)} = readin_SBE_btl(mybtlfiles(j,:));
+    SBEbtlfiles{btlcasts(j)}.Cast(:) = btlcasts(j);
+end
+
+SBEbtlsum_tbl = []; % Combine all SBE bottle files into one table 
+for j = 1:length(btlcasts)
+    SBEbtlsum_tbl = [SBEbtlsum_tbl; SBEbtlfiles{btlcasts(j)}];
+end
+
+%% Read in Winkler file 
+cd(samp_dir)
+Winklers = readtable(Winkler_file,'TextType','string');
+Winklers.Cast = double(Winklers.Cast);
+Winklers.Bottle = double(Winklers.Bottle);
+Winklers.Winkler_mLL = double(Winklers.Winkler_mLL);
+
+%% Calibration without final calibrated salinity data 
+
+btlsum = []; % Indexes by cast number leah_btl{5} == cast 5; 
+% Combine files and calculate sea water properties for CTD sensor number 
+for j = 1:height(btlcasts) % Number of bottle summary files 
+    btlsum{btlcasts(j)} = combine_btl_files(SBEbtlfiles{j},Winklers(Winklers.Cast == btlcasts(j),:),CTD_sen) ;
+end
+%%
+% Pull all bottle files and create one large table 
+btlsum_tbl = [];
+for j = 1:length(btlsum)
+    btlsum_tbl = [btlsum_tbl; btlsum{j}];
+end
+btl_num = unique(btlsum_tbl.Cast);
+% %%
+%%
+% Same Oxygen Sensor for whole cruise 
+% Calibration standards from SBE xmlcon file 
+
+cal.SOC = double(4.5906e-001);
+cal.VOFFSET = double(-0.5026);
+cal.A = double(-4.8449e-003);
+cal.B = double(2.6126e-004);
+cal.C = double(-3.8500e-006);
+cal.E = double(3.60000e-002);
+cal.Tau20 = double(1.5600);
+cal.INSTRUMENT_TYPE = 'SBE43';
+cal.SERIALNO = '1960';
+cal.OCALDATE = '30-Apr-22'; 
+
+H = [-0.033, 5000, 1450]; % Default 
+
+%% non linear multiple regression 
+% Oxygen solubility calculated using GSW Toolbox 
+% Model variables 
+% Treats Winklers as individual points 
+X = [[btlsum_tbl.oxy_volts],...
+    [btlsum_tbl.O2sol_umolkg],...
+    [btlsum_tbl.t],...
+    [btlsum_tbl.prs]];
+bad_casts = [btlsum_tbl.Cast];
+btl_check = [btlsum_tbl.Bottle];
+
+
+Winklers_to_use = btlsum_tbl.Winkler_umolkg;
+Winklers_to_use(btlsum_tbl.prs < 100) = NaN;
+pdens = [btlsum_tbl.prho];
+
+% SBE functional form 
+modelfun = @(b,x)(b(1)*(x(:,1) + cal.VOFFSET)).*x(:,2)...
+    .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+    .*exp((b(2)*x(:,4))./(x(:,3) + 273.15));
+
+% SBE DO with factory calibration  
+btlsum_tbl.CTDuncal_umolkg = (cal.SOC*(X(:,1) + cal.VOFFSET)).*X(:,2)...
+    .*(1 + cal.A*X(:,3) + cal.B*X(:,3).^2 + cal.C*X(:,3).^3)...
+    .*exp((cal.E*X(:,4))./(X(:,3) + 273.15));
+
+beta0 = [cal.SOC 0]; % Starting values for coefficient iterations 
+
+%Non linear multiple regression to get b1 (SOC) and b2 (E term) from SBE
+%functional form using all Winklers_umolkg (from calibrated T/S data) 
+% Run non linear model fit with all Winkler/CTD oxygen (volts) values
+mdl1 = fitnlm(X,Winklers_to_use,modelfun,beta0)
+
+figure
+histfit(mdl1.Residuals.raw)
+title('SOC_k Residuals with Outliers, it = 1')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 2 
+Winkler_outliers1 = find(isoutlier(mdl1.Residuals.Raw,'median') == 1);
+mdl2 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers1)
+
+figure
+histfit(mdl2.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 2')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 3 
+ind = find(isoutlier(mdl2.Residuals.raw,'median') == 1);
+Winkler_outliers2 = [ind; Winkler_outliers1];
+% Exclude outliers from NLMR model 
+mdl3 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers2)
+
+figure
+histfit(mdl3.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 3')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 4 
+ind = find(isoutlier(mdl3.Residuals.raw,'median') == 1);
+Winkler_outliers3 = [ind; Winkler_outliers2];
+% Exclude outliers from NLMR model 
+mdl4 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers3)
+
+figure
+histfit(mdl4.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 4')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 5 
+ind = find(isoutlier(mdl4.Residuals.raw,'median') == 1);
+Winkler_outliers4 = [ind; Winkler_outliers3];
+% Exclude outliers from NLMR model 
+mdl5 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers4)
+
+figure
+histfit(mdl5.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 5')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 6 
+ind = find(isoutlier(mdl5.Residuals.raw,'median') == 1);
+Winkler_outliers5 = [ind; Winkler_outliers4];
+% Exclude outliers from NLMR model 
+mdl6 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers5)
+
+figure
+histfit(mdl6.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 6')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+% Find outliers based on median filter it = 7 
+ind = find(isoutlier(mdl6.Residuals.raw,'median') == 1);
+Winkler_outliers6 = [ind; Winkler_outliers5];
+% Exclude outliers from NLMR model 
+mdl7 = fitnlm(X,Winklers_to_use,modelfun,beta0,'Exclude',Winkler_outliers6)
+
+figure
+histfit(mdl7.Residuals.Raw)
+title('SOC_k Residuals with Outliers Removed, it = 7')
+ylabel('Frequency')
+xlabel('DO Residuals, Winklers - NLMR output (\mumol/kg)')
+
+%Plot residuals versus pressure, time, station, DO concentration with outliers removed   
+mdlcal_k = mdl7;
+cal.SOCcalc = mdlcal_k.Coefficients.Estimate(1);
+cal.Ecalc = mdlcal_k.Coefficients.Estimate(2);
+cal.gain = cal.SOCcalc/cal.SOC;
+cal.Winkler_outliers = Winkler_outliers6(Winkler_outliers6 < height(btlsum_tbl));
+
+out_NLMR = sortrows([bad_casts(Winkler_outliers6) btl_check(Winkler_outliers6) Winklers_to_use(Winkler_outliers6)/44.661/1000.*pdens(Winkler_outliers6)],[1 2])
+%%
+f = figure(8);
+f.Position = [100 100 840 500];
+%Plot residuals versus pressure 
+subplot(2,2,1)
+plot(btlsum_tbl.prs, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.b','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Pressure (db)')
+grid on
+
+%Plot residuals versus cast number/time 
+subplot(2,2,2)
+plot(btlsum_tbl.Cast, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.b','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Station Number')
+grid on
+
+%Plot residuals versus temperature 
+subplot(2,2,3)
+plot(btlsum_tbl.t, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.b','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Temperature (\circC)')
+grid on
+
+%Plot residuals versus oxygen concentration 
+subplot(2,2,4)
+plot(btlsum_tbl.Winkler_umolkg, mdlcal_k.Residuals.raw(1:height(btlsum_tbl)), '.b','Markersize',20); hold on;
+ylabel({'Residual, Winkler - Model','(\mumol/kg)'})
+xlabel('Winkler DO (\mumol/kg)')
+grid on
+sgtitle('Year 10 AR76-03: SOC_k')
+
+%% Decided on SOC calibration 
+SOC_type = 1;
+btlsum_tbl = calibrate_CTD_oxygen(btlsum_tbl,cal,SOC_type);
+
+%%
+% For output structure
+btlsum = []; % Indexes by cast number leah_btl{5} == cast 5; 
+% Combine files and calculate sea water properties for CTD sensor number 
+for i = 1:height(btlcasts) % Number of bottle summary files 
+    btlsum{btlcasts(i)} = btlsum_tbl(btlsum_tbl.Cast == btlcasts(i),:);
+end
+
+
 %% Read in my processed casts 
 
 % Downcasts 
 cd(dc_dir)
 files = ls('*.cnv');
-cast_num = str2num(files(:,10:12)); % Pulls out cast numbers 
+cast_num = str2num(files(:,ns:ne)); % Pulls out cast numbers 
 
 mydowncast = []; % Read all my processed SBE cast into matlab 
-for j = 1:length(cast_num)
-    dcnv_in = readSBScnv(files(j,:));
-    mydowncast{cast_num(j)} = my_cast(dcnv_in); %change so that j references cast number not file length number 
+for i = 1:length(cast_num)
+    dcnv_in = readSBScnv(files(i,:));
+    mydowncast{cast_num(i)} = my_cast(dcnv_in); %change so that i references cast number not file length number 
+    mydowncast{cast_num(i)}.Station(:) = cast_num(i);
 end
 
 % Upcasts 
@@ -28,92 +264,32 @@ cd(uc_dir)
 files = ls('*.cnv');
 
 myupcast = []; % Read all my processed SBE cast into matlab 
-for j = 1:length(cast_num)
-    ucnv_in = readSBScnv(files(j,:));
-    myupcast{cast_num(j)} = my_cast(ucnv_in);
-end
-%% Make sure Leah's cast numbers match my cast numbers
-
-cd(leah_dir)
-downfiles = ls('*.dcc'); % List of Leah's calibrated cast files 
-downcasts = str2num(downfiles(:,9:11)); % Pulls out cast numbers  
-
-upfiles = ls('*.ucc');
-upcasts = str2num(upfiles(:,9:11));
-
-% Make sure that there is a Leah cast file for each of my cast files 
-if cast_num == downcasts 
-    disp('Downcast numbers Line Up')
-    clear downcasts % To use variable namelater 
-else
-    disp('Caution: Issue with Matching Downcast Numbers!')
-end
-
-if cast_num == upcasts
-    disp('Upcast numbers Line Up')
-    clear upcasts % To use variable name later 
-else 
-    disp('Caution: Issue with Matching Upcast Numbers!')
-end
-
-%% Read in Leah's calibrated casts
-cd(leah_dir)
-downfiles = ls('*.dcc'); % List of Leah's calibrated cast files 
-upfiles = ls('*.ucc');
-
-dcc = []; % Read Leah's calibrated SBE casts into matlab 
-for j = 1:length(cast_num)
-    dcc_in = import_dcc(downfiles(j,:));
-    dcc{cast_num(j)} = leah_cast(dcc_in); 
-end
-
-ucc = [];
-for j = 1:length(cast_num)
-    ucc_in = import_dcc(upfiles(j,:));
-    ucc{cast_num(j)} = leah_cast(ucc_in);
+for i = 1:length(cast_num)
+    ucnv_in = readSBScnv(files(i,:));
+    myupcast{cast_num(i)} = my_cast(ucnv_in);
+    myupcast{cast_num(i)}.Station(:) = cast_num(i);
 end
 
 %% Combine and calibrate DO for Casts Read in bottle data and making DO calibration choice 
-btlsum_tbl = btlsum_AR69_01;
+
 CTD_sen = btlsum_tbl.CTD_sen(1); % Sensor package to use for calibration; same as bottle processing 
-% 1 = constant, % 2 = changes as a function of cruise time % 3 = changes as a function of station number 
+SOC_type = 1; % 1 = constant, % 2 = changes as a function of cruise time % 3 = changes as a function of station number 
 
 % btlsum_tbl = calibrate_CTD_oxygen(btlsum_tbl,cal,SOC_type);
 
 CruiseStartTime = mydowncast{cast_num(1)}.StartTimeUTC(1); % Needed for variable SOC 
 %% 
-% btlsum = []; 
-SOC_type = 1; 
+btlsum = []; 
 downcasts = []; upcasts = []; 
-for j = 1:length(cast_num)
-        % btlsum{cast_num(j)} = btlsum_tbl(btlsum_tbl.Cast == cast_num(j),:); 
-        downcasts{cast_num(j)} = process_cast(dcc{cast_num(j)}, mydowncast{cast_num(j)}, cal, SOC_type, CruiseStartTime);
-        upcasts{cast_num(j)} = process_cast(ucc{cast_num(j)}, myupcast{cast_num(j)},  cal, SOC_type, CruiseStartTime);
+for i = 1:length(cast_num)
+        btlsum{cast_num(i)} = btlsum_tbl(btlsum_tbl.Cast == cast_num(i),:); 
+        downcasts{cast_num(i)} = process_cast(mydowncast{cast_num(i)}, CTD_sen, cal, SOC_type, CruiseStartTime);
+        upcasts{cast_num(i)} = process_cast(myupcast{cast_num(i)}, CTD_sen, cal, SOC_type, CruiseStartTime);
 end
-%%
-cd('G:\My Drive\Matlab_work\BC\')
-run('GeneralSettings.m')
-for j = 1:length(cast_num)
-    figure(1)
-    clf
-    plot(downcasts{cast_num(j)}.DOcorr_umolkg1,downcasts{cast_num(j)}.prs,'Linewidth',1.3,'Color',blue)
-    hold on
-    plot(downcasts{cast_num(j)}.DOcorr_umolkg2,downcasts{cast_num(j)}.prs,'Linewidth',1.3,'Color',navy)
-    plot(upcasts{cast_num(j)}.DOcorr_umolkg1,upcasts{cast_num(j)}.prs,'Linewidth',1.3,'Color',red)
-    plot(upcasts{cast_num(j)}.DOcorr_umolkg2,upcasts{cast_num(j)}.prs,'Linewidth',1.3,'Color',maroon)
-    if ~isempty(btlsum{cast_num(j)})
-        plot(btlsum{cast_num(j)}.Winkler1_umolkg1,btlsum{cast_num(j)}.prs,'.k','MarkerSize',30)
-        plot(btlsum{cast_num(j)}.Winkler2_umolkg1,btlsum{cast_num(j)}.prs,'.k','MarkerSize',30)
-    end
-    axis ij; grid on
-    pause
-    
-end
-
 
 %% Plot final data
-for j = 1:length(cast_num)
-    plot_calibrated_DO(downcasts{cast_num(j)},upcasts{cast_num(j)},btlsum{cast_num(j)})
+for i = 1:length(cast_num)
+    plot_calibrated_DO(downcasts{cast_num(i)},upcasts{cast_num(i)},btlsum{cast_num(i)})
 end
 %%
 bad_casts = [NaN; % bad downcasts  
@@ -134,23 +310,8 @@ btlsum_tbl.NLMR_Outlier3(btlsum_tbl.NLMR_Outlier3 == 0) = 2;
 btlsum_tbl.NLMR_Outlier3(isnan(btlsum_tbl.Winkler3_umolkg)) = 9;
 
 btlsum = [];
-for j = 1:length(cast_num)
-        btlsum{cast_num(j)} = btlsum_tbl(btlsum_tbl.Cast == cast_num(j),:); 
-end
-%% Save processed data 
-if savefile == 1
-
-    btlsum_AR69_01 = btlsum;
-    btlsum_AR69_01_tbl = btlsum_tbl; 
-    upcasts_AR69_01 = upcasts;
-    downcasts_AR69_01 = downcasts;
-    btl_num_AR69_01 = btl_num;
-    cast_num_AR69_01 = cast_num;
-    SBE_cal_AR69_01 = cal; 
-    dt_KF_Processed_AR69_01 = datetime('now');
-    clear btlsum_tbl
-    cd(dir)
-    save AR69-01_DO_Processed_KF.mat upcasts_* downcasts_* btl_num_* cast_num_* SBE_cal_* btlsum_* dt_KF_Processed_*
+for i = 1:length(cast_num)
+        btlsum{cast_num(i)} = btlsum_tbl(btlsum_tbl.Cast == cast_num(i),:); 
 end
 
 %% Save processed data 
@@ -281,38 +442,75 @@ end
 %         end
 %     fclose(fileID);
 % end
+%% Reads in bottle data and calibrates CTD oxygen 
+function btlsum = calibrate_CTD_oxygen(btlsum,cal,SOC_type)
+
+x = [btlsum.oxy_volts,btlsum.O2sol_umolkg,btlsum.t,btlsum.prs];
+
+    if SOC_type == 1 % Constant SOC value
+    
+        % SBE functional form without SOC drift 
+        btlsum.DOcorr_umolkg = cal.SOCcalc*(x(:,1) + cal.VOFFSET).*x(:,2)...
+        .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+        .*exp((cal.Ecalc*x(:,4))./(x(:,3) + 273.15));
+        outliers = cal.Winkler_outliers;
+    end
+
+    if SOC_type == 2 % SOC varies with cruise time
+        dtx = datenum(btlsum.Date) - datenum(btlsum.Date(1)); 
+        x = [x, dtx];
+        
+        % SBE functional form with SOC as a function of cruise time
+        btlsum.DOcorr_umolkg = ((cal.SOCrate_dt*x(:,5)) + cal.SOCcalc_dt*(x(:,1) + cal.VOFFSET)).*x(:,2)...
+            .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+            .*exp((cal.Ecalc_dt*x(:,4))./(x(:,3) + 273.15));
+        outliers = cal.Winkler_outliers_dt;
+    end
+
+    if SOC_type == 3 % SOC varies with cast number 
+
+        x = [x,btlsum.Cast];
+        
+        % SBE functional form with SOC as a function of cruise time
+        btlsum.DOcorr_umolkg = ((cal.SOCrate_cn*x(:,5)) + cal.SOCcalc_cn*(x(:,1) + cal.VOFFSET)).*x(:,2)...
+            .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+            .*exp((cal.Ecalc_cn*x(:,4))./(x(:,3) + 273.15));
+        outliers = cal.Winkler_outliers_cn;
+    end
+
+        btlsum.SOC_type = ones(length(btlsum.prs),1)*SOC_type; 
+
+        btlsum.NLMR_Outlier = zeros(length(btlsum.prs),1);
+        btlsum.NLMR_Outlier(outliers) = 1;
+
+            % Reorder variables and remove unnecessary ones
+        btlvars = {'Cruise','Date','Cast','Bottle','prs','depth','lat','lon','temp1','temp2','sal1','sal2','Discrete_Salinity_psu',...
+            'CTDcal','CTD_sen','t','CT','pt','SP','SA','rho','prho','sigma0','oxy_volts','Winkler_mLL',...
+            'Winkler_umolkg','O2sol_umolkg','SOC_type','DOcorr_umolkg','NLMR_Outlier'};
+        btlsum = btlsum(:,btlvars);
+end
+
 
 %% Reads in my processed casts 
 function cast = my_cast(cast)
     cast0 = cast;
     fields = {'source','DataFileType','instrumentheaders','userheaders','vars','longname','units','span','mvars','mvars_format'...
-        'scan','lat','lon','nbin','flag','SeasaveVersion','softwareheaders','t090C','t190C','c0mScm','c1mScm'};
+        'scan','nbin','flag','SeasaveVersion','softwareheaders'};
     cast = rmfield(cast,fields);
     cast = struct2table(cast);
-    cast.Properties.VariableNames = {'CastTimeS','prs','depth','oxy_volts1','oxy_volts2'};
-    cast.oxy_volts1(cast.oxy_volts1 == -9.9900e-29) = NaN; % replaces no data flag with NaN
-    cast.oxy_volts2(cast.oxy_volts2 == -9.9900e-29) = NaN; % replaces no data flag with NaN
+    cast.Properties.VariableNames = {'CastTimeS','prs','depth','temp1','temp2','cond1','cond2','oxy_volts','lat','lon'};
+    cast.oxy_volts(cast.oxy_volts == -9.9900e-29) = NaN; % replaces no data flag with NaN
     cast.StartTimeUTC = ones(length(cast.CastTimeS),1)*datenum(cast0.instrumentheaders.SystemUTC); 
     cast.StartTimeUTC = datetime(cast.StartTimeUTC,'ConvertFrom','datenum');
     cast.CastTimeUTC = cast.StartTimeUTC + cast.CastTimeS/3600/24;
-    cast.CTDcal(:) = "True";
+    cast.CTDcal(:) = {'False'};
+    cast.CTDcal = string(cast.CTDcal);
 end
 
-%% Read in Leah's calibrated casts 
-function leah_cast = leah_cast(leah_cast)
-
-    fields = {'woce','date','time','ox','oxumkg','ox2','oxumkg','ox2umkg','tran','flu','alt'};
-    leah_cast = rmfield(leah_cast,fields);
-    leah_cast.station = leah_cast.station.*ones(length(leah_cast.prs),1);
-    leah_cast.lat = leah_cast.lat.*ones(length(leah_cast.prs),1);
-    leah_cast.lon = leah_cast.lon.*ones(length(leah_cast.prs),1);
-    leah_cast = struct2table(leah_cast);
-    leah_cast.Properties.VariableNames = {'Station','lat','lon','prs','temp1','temp2','sal1','sal2','oxcr1','oxcr2'};    
-end
 
 %% Combines Files and calibrate oxygen data
 
-function cast = process_cast(leah_cast,mycast,cal,SOC_type,CruiseStartTime)
+function cast = process_cast(mycast,CTD_sen,cal,SOC_type,CruiseStartTime)
 %     
 %     % Combine tables by prs variable 
 %     if height(mycast) <= height(leah_cast)
@@ -320,121 +518,76 @@ function cast = process_cast(leah_cast,mycast,cal,SOC_type,CruiseStartTime)
 %     else 
 %         cast = join(leah_cast,mycast,'Keys','prs');
 %     end
-    cast = innerjoin(mycast,leah_cast); 
-  
-    cast.t1 = cast.temp1; 
-    cast.SP1 = cast.sal1; 
-    cast.t2 = cast.temp2; 
-    cast.SP2 = cast.sal2; 
+    cast = mycast; 
+
+    % Decide if using primary or secondary CTD sensor for temp and sal
+    if CTD_sen == 1 % primary sensor (use unless something wrong with data)
+        cast.t = cast.temp1; 
+        cast.cond = cast.cond1;
+     end
+    
+    if CTD_sen == 2 % secondary sensor (use if primary sensor bad)
+        cast.t = cast.temp2; 
+        cast.cond = cond2; 
+    end   
 
     % Calculate other parameters of interest for downcast 
-    cast.SA1 = gsw_SA_from_SP(cast.SP1,cast.prs,cast.lon,cast.lat);
-    cast.CT1 = gsw_CT_from_t(cast.SA1,cast.t1,cast.prs);
-    cast.pt1 = gsw_pt_from_CT(cast.SA1,cast.CT1);  
-    cast.O2sol_umolkg1 = gsw_O2sol(cast.SA1,cast.CT1,cast.prs,cast.lon,cast.lat);
-    cast.rho1 = gsw_rho_CT_exact(cast.SA1,cast.CT1,cast.prs); % in situ density
-    cast.prho1 = gsw_rho_CT_exact(cast.SA1,cast.CT1,0); % potential density with ref == surf
-    cast.sigma01 = gsw_sigma0_CT_exact(cast.SA1,cast.CT1); % cast.prho - 1000 = cast.sigma0 
-
-    cast.SA2 = gsw_SA_from_SP(cast.SP2,cast.prs,cast.lon,cast.lat);
-    cast.CT2 = gsw_CT_from_t(cast.SA2,cast.t2,cast.prs);
-    cast.pt2 = gsw_pt_from_CT(cast.SA2,cast.CT2);  
-    cast.O2sol_umolkg2 = gsw_O2sol(cast.SA2,cast.CT2,cast.prs,cast.lon,cast.lat);
-    cast.rho2 = gsw_rho_CT_exact(cast.SA2,cast.CT2,cast.prs); % in situ density
-    cast.prho2 = gsw_rho_CT_exact(cast.SA2,cast.CT2,0); % potential density with ref == surf
-    cast.sigma02 = gsw_sigma0_CT_exact(cast.SA2,cast.CT2); % cast.prho - 1000 = cast.sigma0 
-
-    % cast.CTD_sen = ones(length(cast.prs),1)*CTD_sen; 
+    cast.SP = gsw_SP_from_C(cast.cond,cast.t,cast.prs);
+    cast.SA = gsw_SA_from_SP(cast.SP,cast.prs,cast.lon,cast.lat);
+    cast.CT = gsw_CT_from_t(cast.SA,cast.t,cast.prs);
+    cast.pt = gsw_pt_from_CT(cast.SA,cast.CT);  
+    cast.O2sol_umolkg = gsw_O2sol(cast.SA,cast.CT,cast.prs,cast.lon,cast.lat);
+    cast.rho = gsw_rho_CT_exact(cast.SA,cast.CT,cast.prs); % in situ density
+    cast.prho = gsw_rho_CT_exact(cast.SA,cast.CT,0); % potential density with ref == surf
+    cast.sigma0 = gsw_sigma0_CT_exact(cast.SA,cast.CT); % cast.prho - 1000 = cast.sigma0 
+    cast.CTD_sen = ones(length(cast.prs),1)*CTD_sen; 
     cast.cruise_d = datenum(cast.StartTimeUTC) - datenum(CruiseStartTime); % Cruise time in days 
-% Primary Sensor     
+    
     if SOC_type == 0 % Seabird factory calibration
         
-        x1 = [cast.oxcr1,cast.O2sol_umolkg1,cast.t1,cast.prs];
+        x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs];
     
         % SBE functional form without SOC drift 
-        cast.DOcorr_umolkg1 = cal.cal1.SOC*(x1(:,1) + cal.cal1.VOFFSET).*x1(:,2)...
-        .*(1 + cal.cal1.A*x1(:,3) + cal.cal1.B*x1(:,3).^2 + cal.cal1.C*x1(:,3).^3)...
-        .*exp((cal.cal1.E*x1(:,4))./(x1(:,3) + 273.15));
+        cast.DOcorr_umolkg = cal.SOC*(x(:,1) + cal.VOFFSET).*x(:,2)...
+        .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+        .*exp((cal.E*x(:,4))./(x(:,3) + 273.15));
     end   
 
     if SOC_type == 1 % Constant SOC value
 
-        x1 = [cast.oxcr1,cast.O2sol_umolkg1,cast.t1,cast.prs];
+        x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs];
     
         % SBE functional form without constant SOC
-        cast.DOcorr_umolkg1 = cal.cal1.SOCcalc*(x1(:,1) + cal.cal1.VOFFSET).*x1(:,2)...
-        .*(1 + cal.cal1.A*x1(:,3) + cal.cal1.B*x1(:,3).^2 + cal.cal1.C*x1(:,3).^3)...
-        .*exp((cal.cal1.Ecalc*x1(:,4))./(x1(:,3) + 273.15));
+        cast.DOcorr_umolkg = cal.SOCcalc*(x(:,1) + cal.VOFFSET).*x(:,2)...
+        .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+        .*exp((cal.Ecalc*x(:,4))./(x(:,3) + 273.15));
     end
 
     if SOC_type == 2 % SOC varies with cruise time
 
-        x1 = [cast.oxcr1,cast.O2sol_umolkg1,cast.t1,cast.prs,cast.cruise_d];
+        x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs,cast.cruise_d];
         
         % SBE functional form with SOC as a function of cruise time
-        cast.DOcorr_umolkg1 = ((cal.cal1.SOCrate_dt*x1(:,5)) + cal.cal1.SOCcalc_dt*(x1(:,1) + cal.cal1.VOFFSET)).*x1(:,2)...
-            .*(1 + cal.cal1.A*x1(:,3) + cal.cal1.B*x1(:,3).^2 + cal.cal1.C*x1(:,3).^3)...
-            .*exp((cal.cal1.Ecalc_dt*x1(:,4))./(x1(:,3) + 273.15));
+        cast.DOcorr_umolkg = ((cal.SOCrate_dt*x(:,5)) + cal.SOCcalc_dt*(x(:,1) + cal.VOFFSET)).*x(:,2)...
+            .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+            .*exp((cal.Ecalc_dt*x(:,4))./(x(:,3) + 273.15));
     end
 
     if SOC_type == 3 % SOC varies with cast number 
 
-        x1 = [cast.oxcr1,cast.O2sol_umolkg1,cast.t1,cast.prs,cast.Station];
+        x = [cast.oxy_volts,cast.O2sol_umolkg,cast.t,cast.prs,cast.Station];
         
         % SBE functional form with SOC as a function of cruise time
-        cast.DOcorr_umolkg1 = ((cal.cal1.SOCrate_cn*x1(:,5)) + cal.cal1.SOCcalc_cn*(x1(:,1) + cal.cal1.VOFFSET)).*x1(:,2)...
-            .*(1 + cal.cal1.A*x1(:,3) + cal.cal1.B*x1(:,3).^2 + cal.cal1.C*x1(:,3).^3)...
-            .*exp((cal.cal1.Ecalc_cn*x1(:,4))./(x1(:,3) + 273.15));
-    end
-% Secondary sensor 
-    if SOC_type == 0 % Seabird factory calibration
-        
-        x2 = [cast.oxcr2,cast.O2sol_umolkg2,cast.t2,cast.prs];
-    
-        % SBE functional form without SOC drift 
-        cast.DOcorr_umolkg2 = cal.cal2.SOC*(x2(:,1) + cal.cal2.VOFFSET).*x2(:,2)...
-        .*(1 + cal.cal2.A*x2(:,3) + cal.cal2.B*x2(:,3).^2 + cal.cal2.C*x2(:,3).^3)...
-        .*exp((cal.cal2.E*x2(:,4))./(x2(:,3) + 273.15));
-    end   
-
-    if SOC_type == 1 % Constant SOC value
-
-        x2 = [cast.oxcr2,cast.O2sol_umolkg2,cast.t2,cast.prs];
-    
-        % SBE functional form without constant SOC
-        cast.DOcorr_umolkg2 = cal.cal2.SOCcalc*(x2(:,1) + cal.cal2.VOFFSET).*x2(:,2)...
-        .*(1 + cal.cal2.A*x2(:,3) + cal.cal2.B*x2(:,3).^2 + cal.cal2.C*x2(:,3).^3)...
-        .*exp((cal.cal2.Ecalc*x2(:,4))./(x2(:,3) + 273.15));
+        cast.DOcorr_umolkg = ((cal.SOCrate_cn*x(:,5)) + cal.SOCcalc_cn*(x(:,1) + cal.VOFFSET)).*x(:,2)...
+            .*(1 + cal.A*x(:,3) + cal.B*x(:,3).^2 + cal.C*x(:,3).^3)...
+            .*exp((cal.Ecalc_cn*x(:,4))./(x(:,3) + 273.15));
     end
 
-    if SOC_type == 2 % SOC varies with cruise time
-
-        x2 = [cast.oxcr2,cast.O2sol_umolkg2,cast.t2,cast.prs,cast.cruise_d];
-        
-        % SBE functional form with SOC as a function of cruise time
-        cast.DOcorr_umolkg2 = ((cal.cal2.SOCrate_dt*x2(:,5)) + cal.cal2.SOCcalc_dt*(x2(:,1) + cal.cal2.VOFFSET)).*x2(:,2)...
-            .*(1 + cal.cal2.A*x2(:,3) + cal.cal2.B*x2(:,3).^2 + cal.cal2.C*x2(:,3).^3)...
-            .*exp((cal.cal2.Ecalc_dt*x2(:,4))./(x2(:,3) + 273.15));
-    end
-
-    if SOC_type == 3 % SOC varies with cast number 
-
-        x2 = [cast.oxcr2,cast.O2sol_umolkg2,cast.t2,cast.prs,cast.Station];
-        
-        % SBE functional form with SOC as a function of cruise time
-        cast.DOcorr_umolkg2 = ((cal.cal2.SOCrate_cn*x2(:,5)) + cal.cal2.SOCcalc_cn*(x2(:,1) + cal.cal2.VOFFSET)).*x2(:,2)...
-            .*(1 + cal.cal2.A*x2(:,3) + cal.cal2.B*x2(:,3).^2 + cal.cal2.C*x2(:,3).^3)...
-            .*exp((cal.cal2.Ecalc_cn*x2(:,4))./(x2(:,3) + 273.15));
-    end
-
-    cast.SOC_type1 = ones(length(cast.prs),1)*SOC_type;
-    cast.SOC_type2 = ones(length(cast.prs),1)*SOC_type; 
+    cast.SOC_type = ones(length(cast.prs),1)*SOC_type; 
 
     % Reorder variables and remove unnecessary ones
-    vars = {'Station','prs','depth','lat','lon','temp1','temp2','sal1','sal2','oxcr1','oxcr2','CastTimeS','CastTimeUTC','StartTimeUTC','cruise_d',...
-        't1','CT1','pt1','SP1','SA1','rho1','prho1','sigma01',...
-        't2','CT2','pt2','SP2','SA2','rho2','prho2','sigma02',...
-        'O2sol_umolkg1','O2sol_umolkg2','SOC_type1','SOC_type2','DOcorr_umolkg1','DOcorr_umolkg2'};
+    vars = {'Station','prs','depth','lat','lon','temp1','temp2','cond1','cond2','CastTimeS','CastTimeUTC','StartTimeUTC','cruise_d','CTDcal'...
+        'CTD_sen','t','CT','pt','SP','SA','rho','prho','sigma0','oxy_volts','DOcorr_umolkg','O2sol_umolkg','SOC_type'};
     cast = cast(:,vars); 
     
 end
@@ -486,9 +639,7 @@ function plot_calibrated_DO(downcasts,upcasts,btlsum)
         plot(downcasts.DOcorr_umolkg,downcasts.prs,'Linewidth',1.2)
         hold on
         plot(upcasts.DOcorr_umolkg,upcasts.prs,'Linewidth',1.2)
-        plot(btlsum.Winkler1_umolkg(btlsum.NLMR_Outlier1 == 0),btlsum.prs(btlsum.NLMR_Outlier1 == 0),'ok','MarkerFaceColor','k')
-        plot(btlsum.Winkler2_umolkg(btlsum.NLMR_Outlier2 == 0),btlsum.prs(btlsum.NLMR_Outlier2 == 0),'ok','MarkerFaceColor','k')
-        plot(btlsum.Winkler3_umolkg(btlsum.NLMR_Outlier3 == 0),btlsum.prs(btlsum.NLMR_Outlier3 == 0),'ok','MarkerFaceColor','k')
+        plot(btlsum.Winkler_umolkg(btlsum.NLMR_Outlier == 0),btlsum.prs(btlsum.NLMR_Outlier == 0),'ok','MarkerFaceColor','k')
         axis ij
         ylabel('Pressure (db)')
         xlabel('Oxygen (\mumol kg^-^1)')

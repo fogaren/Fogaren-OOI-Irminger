@@ -55,7 +55,8 @@ addpath(genpath('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_
 % Yr6wfp = bindata_calcstats(Yr6wfp,depthbins,depthint);
 % Yr7wfp = bindata_calcstats(Yr7wfp,depthbins,depthint);
 % Yr8wfp = bindata_calcstats(Yr8wfp,depthbins,depthint);
-% % %% Combine all deployments
+ %% Combine all deployments
+
 % % save Joseoutput_KFupdate04Feb2025_50m.mat 
 % %% Previously saved binned data
 % cd('G:\Shared drives\NSF_Irminger\Data_Files\HYPM\downloaded_Jan_2025')

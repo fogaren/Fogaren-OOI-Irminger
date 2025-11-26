@@ -1,7 +1,7 @@
 % Assigning depths of interest for intergrations 
 
-Remin0 = [1030 1244 952 1235 418 643 1259]; % from deepest significant P value; w/ glider 12, deep value
-% MLD_winter_max = [1414 1223 1343 503 774 463 598]; % Already calculated 
+%Remin0 = [1030 1244 952 1235 418 643 1259]; % from deepest significant P value; w/ glider 12, deep value
+Remin0 = [1030 1252 952 1251 418 653 1342]; % from deepest significant P value; w/ glider 12, deep value (446)
 % Defined in Dremin_start_end_from_Blended_MLD_product.m
 
 % If Remin0 < MLD_winter, Sequester_top + bottom == 1; 

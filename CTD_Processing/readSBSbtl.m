@@ -16,7 +16,7 @@ function [data] = readSBSbtl ( filename )
 
     % Clean and extract variable names
     headers = strsplit(strtrim(headerLine));
-    headers = matlab.lang.makeValidName(headers);
+        headers = matlab.lang.makeValidName(headers);
 
     % Skip the next line (Position/Time labels)
     fgetl(fid);

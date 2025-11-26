@@ -9,6 +9,8 @@ cd('G:\Shared drives\NSF_Irminger\Data_Files\HYPM\downloaded_Jan_2025')
 load Joseoutput_KFupdate04Feb2025_50m.mat 
 
 %% Combine all deployments 
+number_backscatter_profiles = length(Yr1wfp.profile_start) + length(Yr2wfp.profile_start) + length(Yr3wfp.profile_start) + length(Yr4wfp.profile_start) + length(Yr5wfp.profile_start) + length(Yr6wfp.profile_start) + length(Yr7wfp.profile_start);
+
 wfpmerge.time = [Yr1wfp.time; Yr2wfp.time; Yr3wfp.time; Yr4wfp.time; Yr5wfp.time; Yr6wfp.time; Yr7wfp.time; Yr8wfp.time];
 wfpmerge.pressure = [Yr1wfp.pressure_flord; Yr2wfp.pressure_flord; Yr3wfp.pressure_flord; Yr4wfp.pressure_flord; Yr5wfp.pressure_flord; Yr6wfp.pressure_flord; Yr7wfp.pressure_flord; Yr8wfp.pressure_flord];
 wfpmerge.depth = [Yr1wfp.depth; Yr2wfp.depth; Yr3wfp.depth; Yr4wfp.depth; Yr5wfp.depth; Yr6wfp.depth; Yr7wfp.depth; Yr8wfp.depth];
