@@ -8,14 +8,16 @@ addpath(genpath('G:\My Drive\Matlab_work\Github\cmocean'))
 % dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\AR84_02';
 dir = 'G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\CTD_Processing'; 
 cd(dir)
-load AR8402_DOcal_customhyst.mat
+%%
+% load AR8402_DOcal_customhyst.mat
+load AR8402_DOcal_defaultH.mat
 ns = 10; % Start of cast numbers in file name
 ne = 12; % End of cast numbers in file name 
 
-% dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\downcasts'; 
-% uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\upcasts'; 
-dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\custom_hyst\raw\downcasts';
-uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\custom_hyst\raw\upcasts';
+dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\downcasts'; %
+uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\raw\upcasts'; 
+% dc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\custom_hyst\raw\downcasts';
+% uc_dir = 'C:\Users\fogaren\Desktop\Irminger_2024\AR84_02\CTDdata\custom_hyst\raw\upcasts';
 leah_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\AR84_02\final_salinity_cal';
 bco_dmo = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\BCO-DMO Submission\GOHSNAP\AR84-02';
 savefile = 0; % savefile == 1 for saving; savefile == 0, don't save 
@@ -81,7 +83,10 @@ for j = 1:length(cast_num)
 end
 
 %% Combine and calibrate DO for Casts Read in bottle data and making DO calibration choice 
-btlsum_tbl = btlsum_tbl_AR8402;
+btlsum_tbl = btlsum_tbl_AR8402_defaultH;
+cal1 = cal1_defaultH;
+cal2 = cal2_defaultH;
+cal3 = cal3_defaultH;
 CTD_sen = btlsum_tbl.CTD_sen(1); % Sensor package to use for calibration; same as bottle processing 
 
 CruiseStartTime = mydowncast{cast_num(1)}.StartTimeUTC(1); % Needed for variable SOC 
