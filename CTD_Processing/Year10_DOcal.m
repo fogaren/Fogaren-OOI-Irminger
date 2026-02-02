@@ -18,9 +18,11 @@ addpath(genpath('G:\My Drive\Matlab_work\Github\GSW-Matlab'))
 % correction 
 % btl_dir = 'C:\Users\fogaren\Desktop\AR76-03\btl'; % With hysteresis correction 
 btl_dir = 'C:\Users\fogaren\Desktop\AR76-03\ctd\raw'; % with custom hysteresis correction 
-%cal_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\Year9\From_Leah';
-samp_dir = 'C:\Users\fogaren\Desktop\AR76-03'; % Winkler file location 
+cal_dir = 'G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Alfresco\Year9\From_Leah';
+samp_dir = '';
+Wink_dir = 'C:\Users\fogaren\Desktop\AR76-03'; % Winkler file location 
 Winkler_file = 'Irminger_Sea-10_AR76-03_Discrete_Summary_KF.xlsx'; % Winkler file name 
+
 filesave = 0; % filesave == 1, save calibration output as mat file
 
 % Use Bottle samples to calculate new SOC (gain) and E terms for CTD data 

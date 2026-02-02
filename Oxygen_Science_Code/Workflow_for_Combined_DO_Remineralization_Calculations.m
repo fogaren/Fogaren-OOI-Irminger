@@ -53,7 +53,7 @@ cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('LargeParticle_Calcs_Streamlined.m')
 %% Calculate power and exp fit to attenuated Cremin and Bbl signal
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-run('Attenuation_Calculations.m')
+edit('Attenuation_Calculations.m')
 %% Rough calculation of exported carbon
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 edit('Particulate_Carbon_Flux_Calculation.m')

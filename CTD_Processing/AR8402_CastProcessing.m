@@ -173,7 +173,7 @@ if savefile == 1
     cal_yr9 = cal; 
     dt_Processed_yr9 = datetime('now');
     clear btlsum_tbl
-    cd(dir)
+    % cd(dir)
     cd('G:\Shared drives\NSF_Irminger\OOI Cruises CTD Casts\CTD_Data\Processed')
     save Year9_Processed_KF.mat upcasts_* downcasts_* btl_num_* cast_num_* cal_* btlsum_* dt_Processed_*
 end

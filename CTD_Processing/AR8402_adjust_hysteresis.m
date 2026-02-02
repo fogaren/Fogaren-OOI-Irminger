@@ -10,7 +10,7 @@ for j = 1:height(files)
 end
 
 if CTD_sen == 1
-    % Oxygen, SBE 43
+    % Oxygen, SBE 43 % Update information ***
     % From SBE factory calibration 
     % Serial number 0449, Calibration Date 06-Mar-24
     cal.SOC = 4.63190e-001;
