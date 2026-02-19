@@ -4,6 +4,7 @@ combo.prho_outs_removed = combo.prho_prho_out_removed; % copy density data with 
 combo.doxy_outs_removed = combo.doxy_prho_out_removed; % copy oxygen data with prho outliers removed 
 combo.sal_outs_removed = combo.sal_prho_out_removed;
 combo.temp_outs_removed = combo.temp_prho_out_removed;
+combo.DO_bad = NaN(size(combo.prho_outs_removed)); 
 for yr = 1:7
     for z =  1:2000
 
@@ -21,6 +22,7 @@ for yr = 1:7
             combo.doxy_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
             combo.sal_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
             combo.temp_outs_removed(z,resp_ind(bad_DO == 1)) = NaN;
+            combo.DO_bad(z,resp_ind) = bad_DO;
         end
     end
 end

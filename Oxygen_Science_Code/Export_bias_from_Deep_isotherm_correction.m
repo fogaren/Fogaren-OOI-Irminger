@@ -57,7 +57,7 @@ depth_iso = 1900; % Average depth of the 3.1 isotherm
 depth = 50:depth_iso;
 int_depth = 1150;
 
-figure(10)
+figure
 clf 
 plot(zeros(1,length(50:depth_iso)),50:depth_iso,'k--','Linewidth',1.5)
 hold on
@@ -66,7 +66,7 @@ ylabel('Pressure (dbar)')
 title('Missing DO Respired during Season')
 xlabel('Missing Respiration (\mumol DO kg^-^1 per season)')
 
-figure(11)
+figure
 clf
 plot(DOresp_rate_umolkg_day_mean(50:depth_iso),50:depth_iso,'k--','Linewidth',1.5)
 hold on
@@ -127,6 +127,8 @@ for j = 1:4 %3.4
     axis ij
 
 
+
+
 end
 
 figure(11)
@@ -137,9 +139,9 @@ legend('No Resp at 1900','1 \mumol/kg per yr at 1900','2 \mumol/kg per yr at 190
 adj_umol = [0 1 2 3 4];
 adj_C = [export_Cinventory_molm2_mean export_Cinventory_molm2_adj];
 % for 1:4, didn't feel like changing code above 
-adj_C = [export_Cinventory_molm2_mean 6.8115 7.9358 9.0781 10.2203];
+adj_C = [export_Cinventory_molm2_mean 7.9410 8.6868 9.4327 10.1786];
 figure
 bar(adj_umol,adj_C)
-ylabel([{'Seasonal Export (mol C m^-^2 yr^-^1)'} {'adjusted for removed respiration signal'}])
+ylabel([{'Mean Seasonal Export (mol C m^-^2 yr^-^1)'} {'adjusted for removed respiration signal'}])
 xlabel([{'respiration signal (\mumol DO kg^-^1 per season)'} {'removed with deep isotherm correction'}])
 grid on

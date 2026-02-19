@@ -29,13 +29,13 @@ figure
 semilogy(z,poc,'mo')
 grid on; hold on
 testlm = fitlm(z,log(poc')) % stats match the numbers in Table S3 Marsay 2015
-% plot([z(1) z(end)],[0.37 0.37],'k--')
+plot([z(1) z(end)],[0.37 0.37],'k--')
 
 figure
 plot(z,poc/poc(1),'mo')
 grid on; hold on
 testlm = fitlm(z,log(poc')) % stats match the numbers in Table S3 Marsay 2015
-% plot([z(1) z(end)],[0.37 0.37],'k--')
+plot([z(1) z(end)],[0.37 0.37],'k--')
 
 
 % not sure how to convert these coefficients to z star numbers. 
@@ -56,7 +56,7 @@ plot(z,poc./Fz0,'ok')
 hold on
 plot(zdeep,Fzdeep./Fz0,'-')
 grid on
-% zstar = find(Fzdeep <= (0.37*Fz0),1)
+zstar = find(Fzdeep <= (0.37*Fz0),1)
 
 
 [testfit,gof] = fit(z',poc'/poc(1),'1*exp(-(x-84)/b)')
@@ -108,7 +108,7 @@ grid on
 for j = 3; %1:length(atten_pulses_good);
     pulsecarbon = sinkingpulse_max_gaussfilter_omitnan(:,1,atten_pulses_good(j))*35400*54;
     [pulsefit] = fitlm(wfpmerge.sinkingpulsedepths,log(pulsecarbon))
-    [pulsefit2, gof2] = fit(wfpmerge.sinkingpulsedepths,pulsecarbon/pulsecarbon(1),'1*exp(-(x-200)/b)')
+    [pulsefit2, gof2] = fit(wfpmerge.sinkingpulsedepths,pulsecarbon/pulsecarbon(1),'1*exp(-(x-225)/b)')
     figure(1)
     semilogy(wfpmerge.sinkingpulsedepths,pulsecarbon,'.','Markersize',20)
     hold on
@@ -132,9 +132,9 @@ hold on
 plot([100 2000],[0.37*test2.Coefficients.Estimate(1) 0.37*test2.Coefficients.Estimate(1)],'k--')
 end
 
-
-pulsecarbonmean = sinkingpulse_max_gaussfilter_omitnan_mean;
-test = fit(wfpmerge.sinkingpulsedepths,pulsecarbonmean,'a*exp(-(x-225)/b)')
+%%
+pulsecarbonmean = sinkingpulse_max_gaussfilter_omitnan_mean/sinkingpulse_max_gaussfilter_omitnan_mean(1);
+test = fit(wfpmerge.sinkingpulsedepths,pulsecarbonmean,'1*exp(-(x-225)/b)')
 
 figure(7)
 plot(wfpmerge.sinkingpulsedepths,log(pulsecarbonmean),'ok')
@@ -145,7 +145,7 @@ plot([100 2000],[0.37*test2.Coefficients.Estimate(1) 0.37*test2.Coefficients.Est
 %%
 j = 3
 pulsecarbon = sinkingpulse_max_gaussfilter_omitnan(:,1,atten_pulses_good(j))*35400*54;
-ztest = wfpmerge.sinkingpulsedepths(1):5:wfpmerge.sinkingpulsedepths(end);
+ztest = wfpmerge.sinkingpulsedepths(1):10:wfpmerge.sinkingpulsedepths(end);
 ztest = ztest';
 carboninterp = interp1(wfpmerge.sinkingpulsedepths,pulsecarbon,ztest);
 test2 = fit(ztest,carboninterp,'a*exp(-(x-225)/b)')

@@ -110,7 +110,7 @@ ylim([0 2000])
 clim([260 320])
 datetick('x','yyyy');
 xlim([datenum(2015,01,01) datenum(2022,04,01)])
-cmocean('dense')
+cmocean('-dense')
 ylabel('pressure (dbar)', 'Fontsize', 12); hcb = colorbar; set(hcb,'location','eastoutside')
 hcb.Label.String = 'DO (\mumol kg^-^1)';
 hcb.FontSize = 12;
@@ -192,7 +192,7 @@ ylim([0 2000])
 clim([260 320])
 datetick('x','yyyy');
 xlim([datenum(2015,01,01) datenum(2022,04,01)])
-cmocean('dense')
+cmocean('-dense')
 ylabel('pressure (dbar)', 'Fontsize', 12); hcb = colorbar; set(hcb,'location','eastoutside')
 hcb.Label.String = 'DO (\mumol kg^-^1)';
 hcb.FontSize = 12;
@@ -209,14 +209,7 @@ cd('G:\My Drive\Matlab_work\Github\Meg_Irminger_Review\FINAL')
 load chl_clean.mat
 addpath(genpath('G:\My Drive\Matlab_work\Github\CDT'))
 
-t = [      736090
-      736450
-      736833
-      737192
-      737558
-      737912
-      738281
-      738641];
+
 
 figure
 set(gcf,'position',[100,100,900,500])
@@ -224,10 +217,6 @@ subplot(3,1,1)
 % set(gcf,'position',[100,100,800,150])
 yyaxis left
 ax1 = gca;
-% for j = 1:length(t)
-%     plot([t(j) t(j)],[0 10],'Color',rgb('gray'),'LineStyle',':','Linewidth',1.5)
-%     hold on
-% end
 for j = 1:4
     for k = 2:8
     % plot(chl_final{j}{k}.time,chl_final{j}{k}.data,'.','MarkerSize',8,'Color',rgb('dark gray'))
@@ -263,6 +252,10 @@ cd('G:\Shared drives\NSF_Irminger\Data_Files\HYPM\downloaded_Jan_2025')
 load wfpmerge_plotting.mat 
 
 [B2,I2] = sort(wfpmerge.filteredspikes); 
+for j = 1:7
+    june01_byyr(j) = find(blended_mld_daily_all.dn == datenum(2014+j,06,01));
+    sept15_byyr(j) = find(blended_mld_daily_all.dn == datenum(2014+j,09,15));
+end
 
 subplot(3,1,[2 3])
 ax2 = gca; 
@@ -271,6 +264,10 @@ hold on; axis ij; box on
 % plot(blended_mld_daily_all.dn,blended_mld_daily_all.mld,'.k','MarkerSize',8)
 % plot(blended_mld_daily_all.dn,movmean(blended_mld_daily_all.mld,5),'Color',rgb('dark gray'),'Linewidth',1.9)
 plot(blended_mld_daily_all.dn,movmean(blended_mld_daily_all.mld,5),'Color','k','Linewidth',1.9)
+for j = 1:7
+    plot([blended_mld_daily_all.dn(june01_byyr(j)) blended_mld_daily_all.dn(june01_byyr(j))],[0 2000],'k--','Linewidth',1.1); 
+    plot([blended_mld_daily_all.dn(sept15_byyr(j)) blended_mld_daily_all.dn(sept15_byyr(j))],[0 2000],'k--','Linewidth',1.1); 
+end
 ylim([0 2000])
 ax2.FontSize = 12;
 datetick('x','yyyy');
@@ -340,7 +337,7 @@ ax.FontSize = 12;
 ax.XAxisLocation = 'top';
 xlabel('\itR\rm (\mumol C kg^-^1 d^-^1)')
 text(-0.07,-150,'a.','FontWeight','bold','FontSize',14)
-plot(0.2,446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
+% plot(0.2,446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
 
 
 subplot(1,2,2)
@@ -350,7 +347,7 @@ for yr = 1:7
     plot(movmean(Dremin_length_days{yr}(1:2000),25),1:2000,'Color',colorblind(yr,:),'LineWidth',2.25)
     xlim([0 425])
     ylim([0 1400])
-    xlabel('D_r_e_m_i_n length (d)')
+    xlabel('t_r_e_m_i_n length (d)')
     grid on; box on; axis ij
 end
 ax = gca;
@@ -786,10 +783,10 @@ text(-2.5,475,'b.','FontWeight','bold','FontSize',14)
 %% Option  
 fit_zstar_maxMLD = fitlm(day_mld(mld_max_ind(1:6)),zstar(1:6));
 
-% a: mld vs zstar 
+% d: mld vs zstar 
 figure
-set(gcf,'position',[100,100,825,750])
-subplot(2,2,4)
+set(gcf,'position',[100,100,1225,750])
+subplot(2,3,4.5)
 ax = gca;
 for yr = 1:7
     plot(day_mld(mld_max_ind(yr)),zstar(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
@@ -802,11 +799,13 @@ for yr = 1:7
     hold on
 end
 plot(day_mld(mld_max_ind(7)),zstar(7),'kx','MarkerSize',8,'Linewidth',1.5)
+plot(day_mld(mld_max_ind(7)),zstar(7),'kx','MarkerSize',8,'Linewidth',1.5)
+    
 ylim([100 450])
 grid on
 ax.FontSize = 12;
 % text(450,375,['R^2 = ' num2str(fit_zstar_maxMLD.Rsquared.Ordinary,2)])
-text(450,425,'R^2 = 0.90 (p = 0.004)') % For 2 decimal places
+text(500,425,'R^2 = 0.90 (p = 0.004)') % For 2 decimal places
 ylabel('z^* for C_r_e_m_i_n (m)')
 xlabel('MLD_m_a_x of previous winter (dbar)')
 text(165,475,'d.','FontWeight','bold','FontSize',14)
@@ -814,7 +813,7 @@ text(165,475,'d.','FontWeight','bold','FontSize',14)
 % b, annual export versus zstar
 exportinv_zstar_fit = fitlm(annual_export,zstar);
 
-subplot(2,2,3)
+subplot(2,3,3)
 ax = gca;
 er = errorbar(export_Cinventory_molm2([1:2 4:7]),zstar([1:2 4:7]),export_Cinventory_molm2([1:2 4:7])-export_Cinventory_molm2_low_scaled([1:2 4:7]),'horizontal','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
 hold on
@@ -847,7 +846,7 @@ end
 % c: Mean R versus zstar 
 fit_remin_rate_zstar = fitlm(remin_rate_200to400mean,zstar);
 
-subplot(2,2,2)
+subplot(2,3,2)
 ax = gca;
 ind = 1:7;
 for j = 1:length(ind)
@@ -868,17 +867,17 @@ ylim([100 450])
 xlim([0.01 0.1])
 ax.FontSize = 12;
 text(-.008,475,'b.','FontWeight','bold','FontSize',14)
-l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','SE');
-l.FontSize = 10;
-title(l,'Remin. Year')
+% l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','SE');
+% l.FontSize = 10;
+% title(l,'Remin. Year')
 
-% d: Mean temp versus zstar 
+% a: Mean temp versus zstar 
 for j = 1:length(ind)
     temp_mean_ind(j) = nanmedian(regress_temp{ind(j)}(200:400));
     temp_mean_std(j) = nanstd(regress_temp{ind(j)}(200:400));
 end
 fit_zstar_temp = fitlm(temp_mean_ind,zstar(ind));
-subplot(2,2,1)
+subplot(2,3,1)
 ax = gca;
 h = errorbar(temp_mean_ind,zstar,temp_mean_std,'horizontal','ok','MarkerSize',5,'Linewidth',1,'CapSize',3);
 hold on
@@ -894,6 +893,37 @@ ylim([100 450])
 ax.FontSize = 12;
 text(3.675,475,'a.','FontWeight','bold','FontSize',14)
 % text(3.96,375,'R^2 = 0.22 (p = 0.285)') 
+
+% e: MLDmax versus Zremin0  
+subplot(2,3,5.5)
+fit_remin0_maxMLD = fitlm(day_mld(mld_max_ind(1:6)),Remin0(1:6));
+
+ax = gca;
+for yr = 1:7
+    plot(day_mld(mld_max_ind(yr)),Remin0(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+    hold on
+end
+
+plot([400:1600],fit_remin0_maxMLD.Coefficients.Estimate(2)*(400:1600) + fit_remin0_maxMLD.Coefficients.Estimate(1),'k--','Linewidth',1.2)
+
+for yr = 1:7
+    plot(day_mld(mld_max_ind(yr)),Remin0(yr),'.','Color',colorblind(yr,:),'MarkerSize',30)
+    hold on
+end
+plot(day_mld(mld_max_ind(7)),Remin0(7),'kx','MarkerSize',8,'Linewidth',1.5)
+plot(day_mld(mld_max_ind(7)),446,'o','Color',colorblind(yr,:),'MarkerSize',8,'Linewidth',2)
+plot(day_mld(mld_max_ind(7)),446,'kx','MarkerSize',8,'Linewidth',1.5)
+l = legend('1: 2015-2016','2: 2016-2017','3: 2017-2018','4: 2018-2019','5: 2019-2020','6: 2020-2021','7: 2021-2022','Location','EastOutside');
+l.FontSize = 10;
+title(l,'Remin. Year')
+axis([400 1600 400 1450])
+text(165,1525,'e.','FontWeight','bold','FontSize',14)
+grid on
+ax.FontSize = 12;
+% text(500,1400,['R^2 = ' num2str(fit_remin0_maxMLD.Rsquared.Ordinary,2)])
+text(500,1375,'R^2 = 0.95 (p = 0.0008)')
+ylabel('Z_r_e_m_i_n_0 (dbar)')
+xlabel('MLD_m_a_x of previous winter (dbar)')
 
 %% Option  
 figure
@@ -1074,7 +1104,7 @@ plot(curve_exp_gaussfilter_omitnan_mean.a*exp(curve_exp_gaussfilter_omitnan_mean
 plot(curve_exp_gaussfilter_omitnan_mean.a*exp(curve_exp_gaussfilter_omitnan_mean.b*(200:2000)),200:2000,'k','Linewidth',2)
 grid on
 ax.FontSize = 12; 
-xlim([0 0.00025])
+% xlim([0 0.00025])
 % xlabel('max. b_b_l (m^-^1)')
 xlabel('$\overline{b_{bl}}$ (m$^{{-}1}$)','interpreter','latex','Fontsize',14,'FontName','helvetica')
 ylabel('depth (m)')

@@ -61,6 +61,16 @@ for yr = 1:7
 
 end
 
+% To look at specific Transfer efficiency from data and not exp fit 
+for yr = 1:7
+    try 
+        T600_200(yr) = C_total_remin{yr}(600)./C_total_remin{yr}(200);
+    catch
+        T600_200(yr) = 0;
+    end
+
+end
+
 % % For mean remin rate * mean Dremin
 subplot(2,4,8)
 depth_to_use = 50:1149;
@@ -180,7 +190,7 @@ for j = 1:length(atten_pulses_good)
     legend off
     axis ij
     ylabel ('depth (m)')
-    xlabel('POC (mg C m^-^2 d^-1)') 
+    xlabel('POC (mg C m^-^2 d^-^1)') 
     if yrstr(atten_pulses_good(j)) == 2016
         title('First pulse 2016')
     elseif yrstr(atten_pulses_good(j)) == 2016.5

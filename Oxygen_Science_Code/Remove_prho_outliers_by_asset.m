@@ -7,6 +7,7 @@ for j = 1:13 % Glider numbers
     glider{j}.prho_prho_out_removed = glider{j}.pdens; % Copy prho data for glider
     glider{j}.temp_prho_out_removed = glider{j}.temp; % Copy temp data 
     glider{j}.sal_prho_out_removed = glider{j}.pracsal; % Copy sal data 
+    glider{j}.prho_bad = NaN(size(glider{j}.pracsal)); % Copy sal data
    
     % Assign glider number, science year for Dremin start and end 
     if j == 1 || 2 || 3
@@ -41,6 +42,7 @@ for j = 1:13 % Glider numbers
             glider{j}.prho_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
             glider{j}.temp_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
             glider{j}.sal_prho_out_removed(z,resp_ind(bad_prho ==1)) = NaN;
+            glider{j}.prho_bad(z,resp_ind) = bad_prho; 
 
         end
     end
@@ -63,6 +65,7 @@ resp.doxy_prho_out_removed = resp.doxy; % Copy oxygen data to then overwrite out
 resp.prho_prho_out_removed = resp.prho; % Copy prho data 
 resp.temp_prho_out_removed = resp.temp; % Copy temp data
 resp.sal_prho_out_removed = resp.sal; % Copy sal data
+resp.prho_bad = NaN(size(resp.sal)); % Matrix of Zeros
 clear time doxy prho temp sal backscatter chla IND wggmerge wggmerge_fl
 %% Find density outliers for WFP data, overwrite with NaN
 for yr = 1:7
@@ -82,7 +85,9 @@ for yr = 1:7
             resp.prho_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
             resp.doxy_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
             resp.temp_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
-            tesp.sal_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
+            resp.sal_prho_out_removed(z,resp_ind(bad_prho == 1)) = NaN;
+            resp.prho_bad(z,resp_ind) = bad_prho;
+
         end
     end
 end
