@@ -4,5 +4,5 @@ Biological Pump in the Irminger Sea
 
 
 
-10.5281/zenodo.19076664
+https://zenodo.org/records/19076664
 
