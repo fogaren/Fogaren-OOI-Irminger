@@ -12,13 +12,6 @@ day_mld0 = blended_mld_daily_all.mld;
 day_dn0(isnan(day_mld0)) = [];
 day_mld0(isnan(day_mld0)) = [];
 
-% This overwrites the one point in Winter 6 that is the deepest early in
-% the season; Makes Dremin max for year 6 longer and for year 7 shorter
-% Doesn't change integrated rates; decided not to use 
-
-% day_dn0(2191) = [];
-% day_mld0(2191) = []; % If want to change winter max for year 6
-
 day_mld = interp1(day_dn0,day_mld0,datenum(blended_mld_daily_all.time),'linear');
 day_mld = round(day_mld); % Because oxygen product is gridded by meter
 day_dn = datenum(blended_mld_daily_all.time); 
@@ -79,4 +72,4 @@ end
 
 MLD_winter_max = day_mld(mld_max_ind(2:end)); 
 clear time_chunk* z mld_max j depth data_in_mld b1 b2...
-    day_dn0 day_mld0 clear blended_mld_daily %day*
+    day_dn0 day_mld0 clear blended_mld_daily 

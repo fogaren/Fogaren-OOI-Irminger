@@ -1,63 +1,8 @@
-% figure
-% for j = 1:7
-%     subplot(1,2,1)
-%     Dremin_length_all(:,j) = Dremin_length_days{j};
-%     DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
-%     plot(Dremin_length_days{j},1:2000,'Linewidth',1.5)
-%     hold on
-%     axis ij
-%     grid on
-%     plot(nanmean(Dremin_length_all,2),1:2000,'k--','Linewidth',2)
-%     xlabel('Remin Period (d)')
-%      ylim([0 1500])
-% end
-% 
-% for j = 1:7
-%     subplot(1,2,2)
-%     DOresp_rate_umolkg_day_all(:,j) = DOresp_rate_umolkg_day{j}; 
-%     plot(DOresp_rate_umolkg_day{j}(50:2000),50:2000,'Linewidth',1.5)
-%     hold on
-%     plot(nanmean(DOresp_rate_umolkg_day_all(50:2000,:),2),50:2000,'k--','Linewidth',2)
-%     axis ij
-%     xlim([-0.3 0]); ylim([0 1500])
-%     grid on
-%     xlabel('Resp Rate (\mumol DO kg^-^1 d^-^1)')
-% end
-% sgtitle('Yearly Resp. Rates and Remin. Periods with Means')
-% for j = 1:7
-%     regress_prho_all(:,j) = regress_prho{j}; 
-% %     plot(regress_prho{j},1:2000)
-% %     hold on
-% %     grid on
-% %     axis ij
-% %     plot(nanmean(regress_prho_all,2),1:2000,'k','Linewidth',2)
-% %     xlabel('Density (kg m^-^3)')
-% end
-% 
-% for j = 1:7
-%     DOresp_season_molm3_all(:,j) = DOresp_season_molm3{j};
-% end
-% DOresp_season_molm3_all(1:208,3) = NaN; % Overwrite bad data year 3
-% for j = 1:7
-%     DOresp_season_molm3_all(Remin0(j):end,j) = NaN;
-% end
-% 
-% Dremin_length_mean = mean(Dremin_length_all,2,'omitnan');
-% Dremin_length_std = std(Dremin_length_all,0,2,'omitnan');
-% DOresp_rate_umolkg_day_mean = mean(DOresp_rate_umolkg_day_all,2,'omitnan');
-% DOresp_rate_umolkg_day_std = std(DOresp_rate_umolkg_day_all,0,2,'omitnan');
-% DOresp_season_molm3_mean = mean(DOresp_season_molm3_all,2,'omitnan');
-% DOresp_season_molm3_std = std(DOresp_season_molm3_all,0,2,'omitnan');
-
-
-
-%%
-
 depth_iso = 1900; % Average depth of the 3.1 isotherm 
 depth = 50:depth_iso;
 int_depth = 1150;
 
-figure
+figure(100)
 clf 
 plot(zeros(1,length(50:depth_iso)),50:depth_iso,'k--','Linewidth',1.5)
 hold on
@@ -66,7 +11,7 @@ ylabel('Pressure (dbar)')
 title('Missing DO Respired during Season')
 xlabel('Missing Respiration (\mumol DO kg^-^1 per season)')
 
-figure
+figure(200)
 clf
 plot(DOresp_rate_umolkg_day_mean(50:depth_iso),50:depth_iso,'k--','Linewidth',1.5)
 hold on
@@ -75,13 +20,6 @@ ylabel('Pressure (dbar)')
 xlabel('Respiration rate (\mumol DO kg^-^1 d^-^1)')
 title('Adjusted Daily Respiration Rates')
 
-% figure(12)
-% clf
-% plot(DOresp_season_umolkg_mean(50:depth_iso),50:depth_iso,'k--','Linewidth',1.5)
-% hold on; grid on
-% ylabel('Pressure (dbar)')
-% xlabel('Total Respiration (\mumol DO kg^-^1 per season)')
-% title('Total Adjusted Respiration during Remineralization Period')
 
 for j = 1:4 %3.4
     % Average density(z) and Dremin(z) from all Stratified seasons 
@@ -108,38 +46,30 @@ for j = 1:4 %3.4
     export_DOinventory_molm2_mean = min(cumsum(DOresp_season_molm3_mean(50:depth_iso)));
     export_DOinventory_molm2_adj = min(cumsum(DOresp_season_molm3_adj(50:depth_iso)));
     
-    export_Cinventory_molm2_mean = export_DOinventory_molm2_mean*-0.69
-    export_Cinventory_molm2_adj = export_DOinventory_molm2_adj*-0.69
+    export_Cinventory_molm2_mean = export_DOinventory_molm2_mean*-0.69;
+    export_Cinventory_molm2_adj = export_DOinventory_molm2_adj*-0.69;
+    export_Cinventory_molm2_adj_plot(j) = export_DOinventory_molm2_adj*-0.69;
 
-    figure(10)
+    figure(100)
     plot(DOresp_missed_per_season(50:depth_iso),50:depth_iso,'Linewidth',1.5)
     axis ij
     hold on
 
-    figure(11)
+    figure(200)
     plot(DOresp_rate_umolkg_day_adj(50:depth_iso),50:depth_iso,'Linewidth',1.5)
     hold on
     axis ij
 
-    figure(12)
-    plot(DOresp_season_umolkg_adj(50:depth_iso),50:depth_iso,'Linewidth',1.5)
-    hold on
-    axis ij
-
-
-
-
 end
 
-figure(11)
+figure(200)
 legend('No Resp at 1900','1 \mumol/kg per yr at 1900','2 \mumol/kg per yr at 1900','3 \mumol/kg per yr at 1900','4 \mumol/kg per yr at 1900','Location','SW')
 
 
 %%
 adj_umol = [0 1 2 3 4];
-adj_C = [export_Cinventory_molm2_mean export_Cinventory_molm2_adj];
-% for 1:4, didn't feel like changing code above 
-adj_C = [export_Cinventory_molm2_mean 7.9410 8.6868 9.4327 10.1786];
+adj_C = [export_Cinventory_molm2_mean export_Cinventory_molm2_adj_plot];
+
 figure
 bar(adj_umol,adj_C)
 ylabel([{'Mean Seasonal Export (mol C m^-^2 yr^-^1)'} {'adjusted for removed respiration signal'}])

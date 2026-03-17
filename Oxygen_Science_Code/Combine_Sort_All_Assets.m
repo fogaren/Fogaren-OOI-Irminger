@@ -73,7 +73,6 @@ for pn = 1:length(resp.time)
     wfp_bad_prho_ind(wfp_prs,pn) = resp.prho_bad(:,pn);
 end
 
-
 WFP_SN = ones(size(resp.time)); % Assign WFP asset number of 1
 DO_unsorted = [glid_DO wfp_DO];
 DO_prho_out_removed_unsorted = [glid_DO_prho_out_removed wfp_DO_prho_out_removed];
@@ -99,5 +98,6 @@ combo.sal = sal_unsorted(:,IND);
 combo.sal_prho_out_removed = sal_prho_out_removed_unsorted(:,IND);
 combo.bad_prho = bad_prho_unsorted(:,IND); 
 
-% clear glid_* wfp* DO_* prho_prho_out_removed_unsorted prho_unsorted temp_* sal_* time_* IND j pn
-wfp_prs = 150:1:2600; % Depths of Hilary's product
+clear glid_* wfp* DO_* prho_prho_out_removed_unsorted prho_unsorted temp_* sal_* time_* IND j pn WFP_SN...
+    asset_unsorted bad_prho_unsorted
+wfp_prs = 150:1:2600; % Depths of Hilary's product, reassigned since cleared other wfp above

@@ -1,8 +1,8 @@
-% z = [50 150 300 500]; % K2
-% poc = [133 53 34 23];
+z = [50 150 300 500]; % K2
+poc = [133 53 34 23];
 
-% z = [84 154 402]; % Irminger 
-% poc = [2.17 1.68 0.57];
+z = [84 154 402]; % Irminger 
+poc = [2.17 1.68 0.57];
 
 % z = [82 152 402]; % Iceland
 % poc = [4.47 2.78 1.49];
@@ -22,6 +22,18 @@ grid on
 bfit = fitlm(log(z'),log(poc'))
 % b value = the slope of the log-log plot
 % b r2 and P value match those calculated by Marsay 2015 (Table S3)
+%%
+% z = [51 184 312 446 589]; % papa
+% poc = [6.99 2.45 1.51 1.31 1.45];
+
+% Define the model function
+modelfun = @(b,x) b(1)*exp(-(x-84)/b(2));
+% depth_to_use',C_total_remin{yr}(depth_to_use)'
+% % Initial parameter guesses
+beta0 = [poc(1) z(1)]; 
+%'a*exp(-(x-50)/b)'
+% Fit the nonlinear model
+mdl = fitnlm(z,poc, modelfun, beta0)
 %% 
 % zstar calculation from semi log plot
 
@@ -36,7 +48,7 @@ plot(z,poc/poc(1),'mo')
 grid on; hold on
 testlm = fitlm(z,log(poc')) % stats match the numbers in Table S3 Marsay 2015
 plot([z(1) z(end)],[0.37 0.37],'k--')
-
+%%
 
 % not sure how to convert these coefficients to z star numbers. 
 
@@ -74,6 +86,7 @@ hold on
 plot(log(exp(testlm.Coefficients.Estimate(2)*(50:500)+testlm.Coefficients.Estimate(1))/exp(testlm.Coefficients.Estimate(2)*84+testlm.Coefficients.Estimate(1))))
 %%
 [k2fit,gof] = fit(z',poc'/poc(1),'exp1')
+
 
 z = 50:500;
 fit(z',k2fit.a*(exp(k2fit.b*z')),'a*exp(-(x-50)/b)')

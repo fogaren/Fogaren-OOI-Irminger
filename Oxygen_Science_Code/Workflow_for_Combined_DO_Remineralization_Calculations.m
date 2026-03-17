@@ -9,7 +9,7 @@ glider_prs = 1:1000;
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_March2024')
 load('wfpmerge_output_fixedPc1600db.mat')
 wfp_prs = 150:1:2600; % Depths of Hilary's product
-
+exportfigures = 0; % 
 %% Calculates start and end of Dremin period for each year at each depth 
 % Also calculates maximum winter mixing
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
@@ -24,7 +24,7 @@ run('Remove_prho_outliers_by_asset.m')
 
 %% Combine and sort oxygen data from gliders and wfp into one data product
 % Edit this file to add/remove particular glider data 
-% Currently only ignoring data from Glider 5 (Year 3)
+% Currently only ignoring data from Glider 5 (Year 3, bad drift)
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Combine_Sort_All_Assets.m')
 
@@ -42,32 +42,24 @@ cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('DO_Regression_Dremin_Combined_Assets.m')
 
 %% Determine doxy coverage during Dremin each year and Calculate inventories  
-% Should calculate error bar adjustments for Reventiled values and Annually
-% sequestered values when I finalize those values 
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-edit('Calculate_Inventories_with_scaled_errorbars.m')
+run('Calculate_Inventories_with_scaled_errorbars.m')
 %% Identify large partcle signal and calculate sinking rates 
 % Builds off of Jose's work and runs streamlined version of
-% LargeParticle_Calculations.m
+% LargeParticle_Calculations.m, need to run at least once to save output
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('LargeParticle_Calcs_Streamlined.m')
 %% Calculate power and exp fit to attenuated Cremin and Bbl signal
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Attenuation_Calculations.m')
-%% Rough calculation of exported carbon
+%% Calculations of exported carbon
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Particulate_Carbon_Flux_Calculation.m')
-%% Discussion Points and other
-% This code chokes 
+%% Rough calculation of missed respiration signal
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Export_bias_from_Deep_isotherm_correction.m')
 %% Create Figures 
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-edit('JGR_2024_Figures.m') % Clean this up. 
-% run('JGR_Schematic.m') % Combine this into Figures and delete 
+run('JGR_2024_Figures.m')  
 
-%% Extra Code
-
-% Oxygen_Regressions_byYr_Depth.m makes figure showing oxygen regression
-% from 200-400 m for Year 7 
 

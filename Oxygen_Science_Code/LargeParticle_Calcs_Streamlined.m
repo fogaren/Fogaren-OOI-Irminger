@@ -26,8 +26,8 @@ wfpmerge.profile_index = [Yr1wfp.profile_index; Yr1wfp.profile_index(end)+Yr2wfp
     Yr1wfp.profile_index(end)+Yr2wfp.profile_index(end)+Yr3wfp.profile_index(end)+Yr4wfp.profile_index(end)+Yr5wfp.profile_index(end)+Yr6wfp.profile_index(end)+Yr7wfp.profile_index;...
     Yr1wfp.profile_index(end)+Yr2wfp.profile_index(end)+Yr3wfp.profile_index(end)+Yr4wfp.profile_index(end)+Yr5wfp.profile_index(end)+Yr6wfp.profile_index(end)+Yr7wfp.profile_index(end)+Yr8wfp.profile_index];
 wfpmerge.updown_index = [Yr1wfp.updown_index; Yr2wfp.updown_index; Yr3wfp.updown_index; Yr4wfp.updown_index; Yr5wfp.updown_index; Yr6wfp.updown_index; Yr7wfp.updown_index; Yr8wfp.updown_index];
-wfpmerge.depth_grid = [150:50:2600];
-wfpmerge.profile_index2 = [1:wfpmerge.profile_index(end)];
+wfpmerge.depth_grid = 150:50:2600;
+wfpmerge.profile_index2 = 1:wfpmerge.profile_index(end);
 wfpmerge.filteredspikes = [Yr1wfp.filteredspikes; Yr2wfp.filteredspikes; Yr3wfp.filteredspikes; Yr4wfp.filteredspikes; Yr5wfp.filteredspikes; Yr6wfp.filteredspikes; Yr7wfp.filteredspikes; Yr8wfp.filteredspikes];
 wfpmerge.binned_filteredspikes = [Yr1wfp.binned_filteredspikes; Yr2wfp.binned_filteredspikes; Yr3wfp.binned_filteredspikes; Yr4wfp.binned_filteredspikes; Yr5wfp.binned_filteredspikes; Yr6wfp.binned_filteredspikes; Yr7wfp.binned_filteredspikes; Yr8wfp.binned_filteredspikes];
 wfpmerge.profile_start = [Yr1wfp.profile_start'; Yr2wfp.profile_start'; Yr3wfp.profile_start'; Yr4wfp.profile_start'; Yr5wfp.profile_start'; Yr6wfp.profile_start'; Yr7wfp.profile_start'; Yr8wfp.profile_start'];
@@ -45,17 +45,6 @@ pind = find(floor(Yr1wfp.profile_start) == datenum(2015,07,07));
 % Yr1wfp; each deployment contains more variables used in bbl calculations
 figure
 set(gcf,'position',[100,100,750,650])
-% subplot(1,4,1) % Removed for publication 
-% plot(Yr1wfp.total_vol_backscatter(Yr1wfp.profile_index == pind),Yr1wfp.depth(Yr1wfp.profile_index == pind),'.')
-% axis ij
-% hold on
-% plot(Yr1wfp.betasw(Yr1wfp.profile_index == pind),Yr1wfp.depth(Yr1wfp.profile_index == pind),'.')
-% ax = gca;
-% ax.FontSize = 12; 
-% grid on
-% legend('\beta (m^-^1 sr^-^1)','\beta_s_w (m^-^1 sr^-^1)','Location','South')
-% ylabel('depth (m)')
-
 subplot(1,3,1)
 plot(Yr1wfp.b_bp(Yr1wfp.profile_index == pind),Yr1wfp.depth(Yr1wfp.profile_index == pind),'.')
 hold on
@@ -88,8 +77,6 @@ xlim([0 .00015])
 text(-.000035,-85,'c.','FontWeight','bold','FontSize',14)
 legend('$\overline{b_{bl}}$ (m$^{{-}1}$)','interpreter','latex','Fontsize',13,'Location','south')
 
-
-
 %% Filter profiles by the minimum number of points in each bin
 % Profiles are removed if every depth bin does not include this number of
 % points
@@ -108,17 +95,9 @@ ind_profkeep = find(tol_check >= tol_bins);
 % Statistics on number of points in remaining depth bins
 numpts_filt = squeeze(wfpmerge.binned_filteredspikes(ind_profkeep,:,1));
 
-% Create filtered dataset with only usable depth profiles % OG
+% Create filtered dataset with only usable depth profiles 
 wfpmerge.binned_filteredspikes_filt = wfpmerge.binned_filteredspikes(ind_profkeep,:,:); % without Instrument blank removed 
 wfpmerge.profile_start_filt = wfpmerge.profile_start(ind_profkeep)';
-
-% % Create filtered dataset with all data profiles
-% wfpmerge.binned_filteredspikes_filt = wfpmerge.binned_filteredspikes(:,:,:); % without Instrument blank removed 
-% wfpmerge.profile_start_filt = wfpmerge.profile_start(:)';
-
-% Create filtered dataset with only usable depth profiles 
-% wfpmerge.binned_filteredspikes_filt = wfpmerge.binned_filteredspikes; % without Instrument blank removed 
-% wfpmerge.profile_start_filt = wfpmerge.profile_start';
 %% Hilary's code for identifying time gaps in data
 
 % Identify large temporal gaps in usable profiles
@@ -138,7 +117,7 @@ end
 %%
 % Calculate moving mean over binned data
 %Calculate moving mean over every "smoothnum" profiles, with NaNs omitted
-smoothnum = 6; % was 6 %median time between profiles is 20 hours, so this is 120 hours for median
+smoothnum = 6; % median time between profiles is 20 hours, so this is 120 hours for median
 wfpmerge.binned_filteredspikes_smoothed = movmean(wfpmerge.binned_filteredspikes_filt_wtgaps, smoothnum, 1, 'includenan','endpoints','fill');
 
 %% For my edits Calculate maximum of sinking pulse in each year for each depth bin % HIP Code 
@@ -289,10 +268,6 @@ for i = 1:length(yrstr)
     ax = gca;
     set(ax, 'TickDir', 'out')
     ax.FontSize = 12;
-    % sgtitle('6-profile gaussian smoothing')
-
-
-
 end
 %%
 for i = 1:6
@@ -306,31 +281,13 @@ for i = 1:6
     clim([0.00001 0.00015])
     if i == 1
         ylabel('depth (m)')
-        % rectangle('Position',[180,225,5,1975],'FaceColor','white','LineStyle','none')
-    end
-    if i == 2 
-        % rectangle('Position',[178,225,191-178,1975],'FaceColor','white','LineStyle','none')
     end
     if i == 4
-        % rectangle('Position',[185.5,225,1.5,1975],'FaceColor','white','LineStyle','none')
         colorbar
-    end
-    if i == 5
-        % ylabel('depth (m)')
-    end
-    if i == 6
-        % rectangle('Position',[181,225,217-181,1975],'FaceColor','white','LineStyle','none')
-    end
-    if i == 7
-        % rectangle('Position',[156,225,234-156,1975],'FaceColor','white','LineStyle','none')
-    end
-    if i == 8
-        % rectangle('Position',[191,225,223-191,1975],'FaceColor','white','LineStyle','none')
     end
     axis ij
     cmocean('amp')
     plot(day(datetime(wfpmerge.profile_start_filt_wtgaps(sinkingpulse_max_gaussfilter_omitnan(:,2,j(i))),'ConvertFrom','datenum'),'dayofyear'),wfpmerge.sinkingpulsedepths,'c.','MarkerSize',10)
-    % ylabel('Depth (m)')
     xlabel('day of year')
     if yrstr(i) == max(yrstr)
         colorbar
@@ -382,30 +339,15 @@ for j = 1:length(vel_pulses_good)
     end
     ax.FontSize = 12;
     grid on
-    % sgtitle('Mean w/ 6-profile Gaussian smoothing')
 end
 
 %% Mean sinking rate for the four good pulses
 
-% figure(6)
 for j = 1:length(vel_pulses_good)
-%     plot(wfpmerge.sinkingpulsedepths,day(datetime(sinkingpulse_max_gaussfilter_includenan(:,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear'), '.k','markersize', M); hold on
-%     xlabel ('Depth (m)')
-%     ylabel('day of year')
-%     ax = gca;
-%     ax.FontSize = 12;
-    % pulse{j} = day(datetime(sinkingpulse_max_gaussfilter_omitnan(:,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear') - min(day(datetime(sinkingpulse_max_gaussfilter_omitnan(:,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear'));
-        pulse{j} = day(datetime(sinkingpulse_max_gaussfilter_omitnan(:,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear') - (day(datetime(sinkingpulse_max_gaussfilter_omitnan(1,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear'));
+    pulse{j} = day(datetime(sinkingpulse_max_gaussfilter_omitnan(:,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear') - (day(datetime(sinkingpulse_max_gaussfilter_omitnan(1,3,vel_pulses_good(j)),'ConvertFrom','datenum'),'dayofyear'));
 end
-% 
-% figure(8)
-% for j = 1:length(vel_pulses_good)
-%     plot(wfpmerge.sinkingpulsedepths,pulse{j}, '.k','markersize', M); hold on
-%     xlabel ('Depth (m)')
-%     ylabel('day of year')
-% end
+
 pulse{1}(3)= NaN; % Removed data for point that occurs more than 20 days before pulse spike
-% pulse{2}(9) = NaN;
 p2 = [pulse{1} pulse{2} pulse{3} pulse{4}];
 p3 = [pulse{1}; pulse{2}; pulse{3}; pulse{4}];
 d3 = [wfpmerge.sinkingpulsedepths; wfpmerge.sinkingpulsedepths; wfpmerge.sinkingpulsedepths; wfpmerge.sinkingpulsedepths];
@@ -435,5 +377,3 @@ subplot(1,2,2)
 plot(wfpmerge.sinkingpulsedepths,nanmedian(p2,2),'.b','MarkerSize',M)
 legend('Median of all pulses','Location','NW')
 title(['Sinking rate = ' num2str(SR_allpulses_median,3) ' ' '(' num2str(SR_allpulses_median_low,3) '-' num2str(SR_allpulses_median_high,3) ') m/d'])
-
-

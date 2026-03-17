@@ -76,3 +76,59 @@ for j = 1:length(asset_num)
     
     perbad(j) = assbad/((m1*n1)-assnan)*100;
 end
+%%
+%% Sinking pulses with exponential fit
+figure
+for j = 1:length(atten_pulses_good)
+    subplot(2,3,j)
+    plot(sinkingpulse_max_gaussfilter_omitnan(:,1,atten_pulses_good(j)),wfpmerge.sinkingpulsedepths,'.','markersize', M)
+    hold on
+    plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.b*(200:2000)),200:2000,'k','Linewidth',2)
+    plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.b*(50:200)),50:200,'Color',rgb('gray'),'Linewidth',1.5)
+    legend off
+    axis ij
+    ylabel ('Pressure (m)')
+    xlabel('max b_b_l (m^-^1)') 
+    if yrstr(atten_pulses_good(j)) == 2016
+        title('First pulse 2016')
+    elseif yrstr(atten_pulses_good(j)) == 2016.5
+        title('Second pulse 2016')
+    else
+        title(string(yrstr(atten_pulses_good(j))))
+    end
+    xlim([0 0.00025])
+end
+%%
+for j = 1:5,8;
+    % [curve_exp_gaussfilter_omitnan{j},gof_exp_gaussfilter_omitnan{j}] = fit(wfpmerge.sinkingpulsedepths,sinkingpulse_max_gaussfilter_omitnan(:,1,j)./sinkingpulse_max_gaussfilter_omitnan(1,1,j),'exp1'); 
+    [curve_exp_gaussfilter_omitnan{j},gof_exp_gaussfilter_omitnan{j}] = fit(wfpmerge.sinkingpulsedepths,sinkingpulse_max_gaussfilter_omitnan(:,1,j),'exp1');
+end
+%% 
+figure
+for j = 1:5,8;
+    % plot(curve_exp_gaussfilter_omitnan{j},wfpmerge.sinkingpulsedepths,sinkingpulse_max_gaussfilter_omitnan(:,1,j)./sinkingpulse_max_gaussfilter_omitnan(1,1,j),'predobs'); hold on
+    plot(curve_exp_gaussfilter_omitnan{j},'predfunc'); hold on
+end
+%%
+figure
+plot(curve_exp_gaussfilter_omitnan_mean.a*exp(curve_exp_gaussfilter_omitnan_mean.b*(200:2000)),200:2000)
+%%
+j = 1
+figure
+plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.b*(200:2000)),200:2000,'k','Linewidth',2); hold on
+plot(1.017*exp(-0.0001861*(200:2000)),200:2000,'k--','Linewidth',2)
+plot(1.362*exp(-0.0004611*(200:2000)),200:2000,'k--','Linewidth',2)
+%%
+figure
+er1 = 161.1695*exp(-0.0005*(200:2000));
+er2 = 215.9366*exp(-0.0002*(200:2000));
+errorbar(curve_exp_gaussfilter_omitnan{1}.a*exp(curve_exp_gaussfilter_omitnan{1}.b*(200:2000)),200:2000,er2,er1,'horizontal'); hold on
+axis ij
+
+
+figure
+for j = 1:length(atten_pulses_good)
+plot(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.a*exp(curve_exp_gaussfilter_omitnan{atten_pulses_good(j)}.b*(200:2000)),200:2000,'Linewidth',2); hold on
+axis ij
+h = plot(curve_exp_gaussfilter_omitnan{1},'predob'); hold on
+end

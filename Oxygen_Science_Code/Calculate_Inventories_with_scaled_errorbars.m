@@ -240,6 +240,8 @@ for j = 1:7
     plot(regress_prho_mean,50:2000,'k','Linewidth',2)
     xlabel('Density (kg m^-^3)')
 end
+ylim([50 2000])
+title('Yearly Density with Mean')
 
 figure
 for j = 1:7
@@ -251,6 +253,8 @@ for j = 1:7
     plot(nanmedian(regress_temp_all(20:2000,:),2),20:2000,'k--','Linewidth',2)
     xlabel('temp (\circ C)')
 end
+ylim([50 2000])
+title('Yearly temperature with Mean')
 
 %%
-clear z yr top_cutoff resp_start_z* resp_end_z* resp_ind* hcb
+clear j z yr top_cutoff resp_start_z* resp_end_z* resp_ind* hcb
