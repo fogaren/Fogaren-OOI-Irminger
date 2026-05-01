@@ -9,6 +9,8 @@ glider_prs = 1:1000;
 cd('G:\Shared drives\NSF_Irminger\Data_Files\From_Hilary\CalibratedOxygenProduct_March2024')
 load('wfpmerge_output_fixedPc1600db.mat')
 wfp_prs = 150:1:2600; % Depths of Hilary's product
+lat_wfp = mean(wggmerge.lat,'omitnan');
+lon_wfp = mean(wggmerge.lon,'omitnan');
 exportfigures = 0; % 
 %% Calculates start and end of Dremin period for each year at each depth 
 % Also calculates maximum winter mixing
@@ -60,6 +62,6 @@ cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
 run('Export_bias_from_Deep_isotherm_correction.m')
 %% Create Figures 
 cd('G:\My Drive\Matlab_work\BC\Fogaren-OOI-Irminger\Oxygen_Science_Code')
-run('JGR_2024_Figures.m')  
+edit('JGR_2024_Figures.m')  
 
 
